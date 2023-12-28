@@ -8,8 +8,7 @@ import (
 	"image"
 	"image/color"
 	"os"
-	"playful-patterns.com/bakoko/utils"
-	"playful-patterns.com/bakoko/world"
+	. "playful-patterns.com/bakoko"
 	"slices"
 )
 
@@ -46,7 +45,7 @@ var colorNeutralLight2 = colorHex(0x808080)
 var colorNeutralLight3 = colorHex(0xdedede)
 
 func (g *Game) Update() error {
-	var input world.Input
+	var input Input
 
 	// Get keyboard input.
 	var keys []ebiten.Key
@@ -63,33 +62,33 @@ func (g *Game) Update() error {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		input.Shoot = true
 		x, y := ebiten.CursorPosition()
-		input.ShootPt.X = int64(x)
-		input.ShootPt.Y = int64(y)
+		input.ShootPt.X = Int(x)
+		input.ShootPt.Y = Int(y)
 	}
 
 	//g.w.Step(&input)
 	input.SerializeToFile("input.bin")
-	utils.TouchFile("input-ready")
-	utils.WaitForFile("world-ready")
+	TouchFile("input-ready")
+	WaitForFile("world-ready")
 	g.w.DeserializeFromFile("world.bin")
 	return nil
 }
 
-func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos world.Point) {
+func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Point) {
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(pos.X), float64(pos.Y))
+	op.GeoM.Translate(Real(pos.X), Real(pos.Y))
 	screen.DrawImage(img, op)
 }
 
-func DrawCircle(screen *ebiten.Image, img *ebiten.Image, pos world.Point, radius float64) {
+func DrawCircle(screen *ebiten.Image, img *ebiten.Image, pos Point, radius Real) {
 	op := &ebiten.DrawImageOptions{}
 	size := img.Bounds().Size()
-	newDx := radius / float64(1000) / float64(size.X)
-	newDy := radius / float64(1000) / float64(size.Y)
+	newDx := radius / Real(Unit) / Real(size.X)
+	newDy := radius / Real(Unit) / Real(size.Y)
 	op.GeoM.Scale(newDx, newDy)
 	// Have the pos indicate the center, not the top-left.
-	//op.GeoM.Translate(float64(pos.X)-newDx/2, float64(pos.Y)-newDy/2)
-	op.GeoM.Translate((float64(pos.X)-radius/2)/float64(1000), (float64(pos.Y)-radius/2)/float64(1000))
+	//op.GeoM.Translate(Real(pos.X)-newDx/2, Real(pos.Y)-newDy/2)
+	op.GeoM.Translate((Real(pos.X)-radius/2)/Real(Unit), (Real(pos.Y)-radius/2)/Real(Unit))
 	screen.DrawImage(img, op)
 
 	dbgImg := ebiten.NewImage(3, 3)
@@ -101,15 +100,15 @@ func DrawCircle(screen *ebiten.Image, img *ebiten.Image, pos world.Point, radius
 	})
 	op = &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(newDx, newDy)
-	op.GeoM.Translate(float64(pos.X), float64(pos.Y))
+	op.GeoM.Translate(Real(pos.X), Real(pos.Y))
 	screen.DrawImage(dbgImg, op)
 }
 
-func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, player *world.Character) {
-	DrawCircle(screen, playerImage, player.Pos, float64(player.Diameter))
-	for idx := int64(0); idx < player.NBalls; idx++ {
+func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, player *Character) {
+	DrawCircle(screen, playerImage, player.Pos, Real(player.Diameter))
+	for idx := Int(0); idx < player.NBalls; idx++ {
 		DrawCircle(screen, playerImage,
-			world.Point{X: player.Pos.X - player.Diameter/2 - 10*1000, Y: player.Pos.Y + idx*12*1000 - player.Diameter/2 + 10*1000}, float64(10*1000))
+			Point{X: player.Pos.X - player.Diameter/2 - 10*Unit, Y: player.Pos.Y + idx*12*Unit - player.Diameter/2 + 10*Unit}, Real(10*Unit))
 	}
 }
 
@@ -120,12 +119,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	DrawPlayer(screen, g.player1, &g.w.Player1)
 	DrawPlayer(screen, g.player2, &g.w.Player2)
 	for _, ball := range g.w.Balls {
-		DrawCircle(screen, g.ball, ball.Pos, float64(ball.Diameter))
+		DrawCircle(screen, g.ball, ball.Pos, Real(ball.Diameter))
 	}
 	//img1 := ebiten.NewImage(50, 50)
 	//img1.Fill(colorPrimary)
 	//op := &ebiten.DrawImageOptions{}
-	//op.GeoM.Translate(float64(g.w.Player1.Pos.X), float64(g.w.Player1.Pos.Y))
+	//op.GeoM.Translate(Real(g.w.Player1.Pos.X), Real(g.w.Player1.Pos.Y))
 	//screen.DrawImage(img1, op)
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("ActualTPS: %f", ebiten.ActualTPS()))
@@ -139,7 +138,7 @@ func init() {
 }
 
 type Game struct {
-	w       world.World
+	w       World
 	player1 *ebiten.Image
 	player2 *ebiten.Image
 	ball    *ebiten.Image
@@ -148,20 +147,20 @@ type Game struct {
 func loadImage(str string) *ebiten.Image {
 	file, err := os.Open(str)
 	defer file.Close()
-	utils.Check(err)
+	Check(err)
 
 	img, _, err := image.Decode(file)
-	utils.Check(err)
+	Check(err)
 	return ebiten.NewImageFromImage(img)
 }
 
 func main() {
 	var g Game
-	g.ball = loadImage("ball.png")
-	g.player1 = loadImage("player1.png")
-	g.player2 = loadImage("player2.png")
+	g.ball = loadImage("sprites/ball.png")
+	g.player1 = loadImage("sprites/player1.png")
+	g.player2 = loadImage("sprites/player2.png")
 	ebiten.SetWindowSize(300, 300)
 	ebiten.SetWindowTitle("Viewer")
 	err := ebiten.RunGame(&g)
-	utils.Check(err)
+	Check(err)
 }

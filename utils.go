@@ -1,4 +1,4 @@
-package utils
+package bakoko
 
 import (
 	"encoding/binary"
@@ -53,7 +53,6 @@ func WaitForFile(name string) {
 					return
 				}
 			}
-			return
 		} else if errors.Is(err, os.ErrNotExist) {
 			// name does not exist
 		} else {

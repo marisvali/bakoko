@@ -1,19 +1,23 @@
-package world
+package bakoko
 
 import (
 	"bytes"
 	"math"
-	"playful-patterns.com/bakoko/utils"
 )
 
+type Real = float64
+type Int = int64
+
+const Unit = Int(1000)
+
 type Point struct {
-	X, Y int64
+	X, Y Int
 }
 
-func (p *Point) DistTo(other Point) int64 {
+func (p *Point) DistTo(other Point) Int {
 	dx := p.X - other.X
 	dy := p.Y - other.Y
-	return int64(math.Sqrt(float64(dx*dx + dy*dy)))
+	return Int(math.Sqrt(Real(dx*dx + dy*dy)))
 }
 
 func (p *Point) Add(other Point) {
@@ -21,14 +25,14 @@ func (p *Point) Add(other Point) {
 	p.Y += other.Y
 }
 
-func (p *Point) Mul(factor float64) Point {
-	p.X = int64(float64(p.X) * factor)
-	p.Y = int64(float64(p.Y) * factor)
+func (p *Point) Mul(factor Real) Point {
+	p.X = Int(Real(p.X) * factor)
+	p.Y = Int(Real(p.Y) * factor)
 	return *p
 }
 
-func (p *Point) Len() int64 {
-	return int64(math.Sqrt(float64(p.X*p.X + p.Y*p.Y)))
+func (p *Point) Len() Int {
+	return Int(math.Sqrt(Real(p.X*p.X + p.Y*p.Y)))
 }
 
 func (p *Point) To(other Point) Point {
@@ -36,21 +40,21 @@ func (p *Point) To(other Point) Point {
 }
 
 func (p *Point) Norm() Point {
-	p.Mul(float64(1000) / float64(p.Len()))
+	p.Mul(Real(Unit) / Real(p.Len()))
 	return *p
 }
 
 type Ball struct {
 	Pos            Point
-	Diameter       int64
+	Diameter       Int
 	Speed          Point
 	CanBeCollected bool
 }
 
 type Character struct {
 	Pos      Point
-	Diameter int64
-	NBalls   int64
+	Diameter Int
+	NBalls   Int
 }
 
 type World struct {
@@ -61,29 +65,29 @@ type World struct {
 
 func (w *World) Serialize() []byte {
 	buf := new(bytes.Buffer)
-	utils.Serialize(buf, w.Player1)
-	utils.Serialize(buf, w.Player2)
-	utils.Serialize(buf, int64(len(w.Balls)))
-	utils.Serialize(buf, w.Balls)
+	Serialize(buf, w.Player1)
+	Serialize(buf, w.Player2)
+	Serialize(buf, Int(len(w.Balls)))
+	Serialize(buf, w.Balls)
 	return buf.Bytes()
 }
 
 func (w *World) Deserialize(buf *bytes.Buffer) {
-	utils.Deserialize(buf, &w.Player1)
-	utils.Deserialize(buf, &w.Player2)
-	var lenBalls int64
-	utils.Deserialize(buf, &lenBalls)
+	Deserialize(buf, &w.Player1)
+	Deserialize(buf, &w.Player2)
+	var lenBalls Int
+	Deserialize(buf, &lenBalls)
 	w.Balls = make([]Ball, lenBalls)
-	utils.Deserialize(buf, w.Balls)
+	Deserialize(buf, w.Balls)
 }
 
 func (w *World) SerializeToFile(filename string) {
 	data := w.Serialize()
-	utils.WriteFile(filename, data)
+	WriteFile(filename, data)
 }
 
 func (w *World) DeserializeFromFile(filename string) {
-	buf := bytes.NewBuffer(utils.ReadFile(filename))
+	buf := bytes.NewBuffer(ReadFile(filename))
 	w.Deserialize(buf)
 }
 
@@ -98,14 +102,14 @@ type Input struct {
 
 func (i *Input) SerializeToFile(filename string) {
 	buf := new(bytes.Buffer)
-	utils.Serialize(buf, i)
-	utils.WriteFile(filename, buf.Bytes())
+	Serialize(buf, i)
+	WriteFile(filename, buf.Bytes())
 }
 
 func (i *Input) DeserializeFromFile(filename string) {
-	data := utils.ReadFile(filename)
+	data := ReadFile(filename)
 	buf := bytes.NewBuffer(data)
-	utils.Deserialize(buf, i)
+	Deserialize(buf, i)
 }
 
 func HandlePlayerBallInteraction(player *Character, balls *[]Ball) {
@@ -131,9 +135,9 @@ func ShootBall(player *Character, balls *[]Ball, pt Point) {
 	speed.Mul(3)
 
 	ball := Ball{
-		//Pos:            Point{player.Pos.X + (player.Diameter+30*1000)/2 + 2*1000, player.Pos.Y},
+		//Pos:            Point{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
 		Pos:            player.Pos,
-		Diameter:       30 * 1000,
+		Diameter:       30 * Unit,
 		Speed:          speed,
 		CanBeCollected: false,
 	}
@@ -141,28 +145,28 @@ func ShootBall(player *Character, balls *[]Ball, pt Point) {
 	player.NBalls--
 }
 
-func (w *World) Step(input *Input, frameIdx int) error {
+func (w *World) Step(input *Input, frameIdx int) {
 	if input.MoveRight {
-		w.Player1.Pos.X += 1000
+		w.Player1.Pos.X += Unit
 	}
 	if input.MoveLeft {
-		w.Player1.Pos.X -= 1000
+		w.Player1.Pos.X -= Unit
 	}
 	if input.MoveUp {
-		w.Player1.Pos.Y -= 1000
+		w.Player1.Pos.Y -= Unit
 	}
 	if input.MoveDown {
-		w.Player1.Pos.Y += 1000
+		w.Player1.Pos.Y += Unit
 	}
 	if input.Shoot || frameIdx == 20 {
-		ShootBall(&w.Player1, &w.Balls, input.ShootPt.Mul(1000))
+		ShootBall(&w.Player1, &w.Balls, input.ShootPt.Mul(Real(Unit)))
 	}
 
 	for idx := range w.Balls {
 		ball := &w.Balls[idx]
 		if ball.Speed.Len() > 0 {
 			ball.Pos.Add(ball.Speed)
-			factor := float64(ball.Speed.Len()-30) / float64(ball.Speed.Len())
+			factor := Real(ball.Speed.Len()-30) / Real(ball.Speed.Len())
 			ball.Speed.Mul(factor)
 		}
 		if !ball.CanBeCollected && ball.Speed.Len() < 100 {
@@ -172,5 +176,4 @@ func (w *World) Step(input *Input, frameIdx int) error {
 
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
 	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
-	return nil
 }
