@@ -9,6 +9,7 @@ import (
 	"image/color"
 	"os"
 	. "playful-patterns.com/bakoko"
+	. "playful-patterns.com/bakoko/ints"
 	"slices"
 )
 
@@ -62,8 +63,9 @@ func (g *Game) Update() error {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		input.Shoot = true
 		x, y := ebiten.CursorPosition()
-		input.ShootPt.X = Int(x)
-		input.ShootPt.Y = Int(y)
+		// Translate from screen coordinates to in-world units.
+		input.ShootPt.X = ScreenToWorld(x)
+		input.ShootPt.Y = ScreenToWorld(y)
 	}
 
 	//g.w.Step(&input)
@@ -74,23 +76,45 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Point) {
+func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(Real(pos.X), Real(pos.Y))
+	op.GeoM.Translate(pos.X.ToFloat64(), pos.Y.ToFloat64())
 	screen.DrawImage(img, op)
 }
 
-func DrawCircle(screen *ebiten.Image, img *ebiten.Image, pos Point, radius Real) {
+func WorldToScreen(val Int) int {
+	return int(val.ToInt64()) / Unit
+}
+
+func WorldToScreenFloat(val Int) float64 {
+	return val.ToFloat64() / Unit
+}
+
+func ScreenToWorld(val int) Int {
+	return U(int64(val))
+}
+
+func DrawCircle(screen *ebiten.Image, img *ebiten.Image, x float64, y float64,
+	diameter float64) {
 	op := &ebiten.DrawImageOptions{}
+
+	// Resize image to fit the diameter of the circle we want to draw.
+	// This kind of scaling is very useful during development when the final
+	// sizes are not decided, and thus it's impossible to have final sprites.
+	// For an actual release, scaling should be avoided.
 	size := img.Bounds().Size()
-	newDx := radius / Real(Unit) / Real(size.X)
-	newDy := radius / Real(Unit) / Real(size.Y)
+	newDx := diameter / float64(size.X)
+	newDy := diameter / float64(size.Y)
 	op.GeoM.Scale(newDx, newDy)
-	// Have the pos indicate the center, not the top-left.
-	//op.GeoM.Translate(Real(pos.X)-newDx/2, Real(pos.Y)-newDy/2)
-	op.GeoM.Translate((Real(pos.X)-radius/2)/Real(Unit), (Real(pos.Y)-radius/2)/Real(Unit))
+
+	// Place the image so that (x, y) falls at its center,
+	// not its top-left corner.
+	op.GeoM.Translate(x-diameter/2, y-diameter/2)
+
 	screen.DrawImage(img, op)
 
+	// Draw a small white rectangle in the center of the image,
+	// to help debug issues with scaling and positioning.
 	dbgImg := ebiten.NewImage(3, 3)
 	dbgImg.Fill(color.RGBA{
 		R: 255,
@@ -100,15 +124,23 @@ func DrawCircle(screen *ebiten.Image, img *ebiten.Image, pos Point, radius Real)
 	})
 	op = &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(newDx, newDy)
-	op.GeoM.Translate(Real(pos.X), Real(pos.Y))
+	op.GeoM.Translate(x, y)
 	screen.DrawImage(dbgImg, op)
 }
 
-func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, player *Character) {
-	DrawCircle(screen, playerImage, player.Pos, Real(player.Diameter))
-	for idx := Int(0); idx < player.NBalls; idx++ {
-		DrawCircle(screen, playerImage,
-			Point{X: player.Pos.X - player.Diameter/2 - 10*Unit, Y: player.Pos.Y + idx*12*Unit - player.Diameter/2 + 10*Unit}, Real(10*Unit))
+func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, player *Player) {
+	// Draw the player sprite.
+	x := WorldToScreenFloat(player.Pos.X)
+	y := WorldToScreenFloat(player.Pos.Y)
+	diam := WorldToScreenFloat(player.Diameter)
+	DrawCircle(screen, playerImage, x, y, diam)
+
+	// Draw a small sprite for each ball that the player has.
+	for idx := int64(0); idx < player.NBalls.ToInt64(); idx++ {
+		smallX := x - diam/2 - 10
+		smallY := y + float64(idx*12) - diam/2 + 10
+		smallDiam := float64(10)
+		DrawCircle(screen, playerImage, smallX, smallY, smallDiam)
 	}
 }
 
@@ -119,7 +151,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	DrawPlayer(screen, g.player1, &g.w.Player1)
 	DrawPlayer(screen, g.player2, &g.w.Player2)
 	for _, ball := range g.w.Balls {
-		DrawCircle(screen, g.ball, ball.Pos, Real(ball.Diameter))
+		DrawCircle(screen, g.ball,
+			WorldToScreenFloat(ball.Pos.X),
+			WorldToScreenFloat(ball.Pos.Y),
+			WorldToScreenFloat(ball.Diameter))
 	}
 	//img1 := ebiten.NewImage(50, 50)
 	//img1.Fill(colorPrimary)

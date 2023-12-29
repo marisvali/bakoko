@@ -1,5 +1,5 @@
 /*
-Question:
+Questions:
 - Is there a performance difference between regular functions and those with
 value receivers? For example is add(a, b) faster or slower than a.add(b)?
 - Is there a performance difference between value receivers and pointer

@@ -1,6 +1,9 @@
 package main
 
-import . "playful-patterns.com/bakoko"
+import (
+	. "playful-patterns.com/bakoko"
+)
+import . "playful-patterns.com/bakoko/ints"
 
 func main() {
 	var input Input
@@ -8,26 +11,26 @@ func main() {
 	//if utils.FileExists("world.bin") {
 	//	w.DeserializeFromFile("world.bin")
 	//}
-	w.Player1 = Character{
-		Pos:      Point{X: 60 * Unit, Y: 260 * Unit},
-		Diameter: 50 * Unit,
-		NBalls:   3}
-	w.Player2 = Character{
-		Pos:      Point{X: 180 * Unit, Y: 60 * Unit},
-		Diameter: 50 * Unit,
-		NBalls:   3}
+	w.Player1 = Player{
+		Pos:      UPt(60, 260),
+		Diameter: U(50),
+		NBalls:   I(3)}
+	w.Player2 = Player{
+		Pos:      UPt(180, 60),
+		Diameter: U(50),
+		NBalls:   I(3)}
 	w.Balls = []Ball{
 		{
-			Pos:      Point{X: 120 * Unit, Y: 70 * Unit},
-			Diameter: 30 * Unit,
+			Pos:      UPt(120, 70),
+			Diameter: U(30),
 		},
 		{
-			Pos:      Point{X: 90 * Unit, Y: 210 * Unit},
-			Diameter: 30 * Unit,
+			Pos:      UPt(90, 210),
+			Diameter: U(30),
 		},
 		{
-			Pos:      Point{X: 190 * Unit, Y: 140 * Unit},
-			Diameter: 30 * Unit,
+			Pos:      UPt(190, 140),
+			Diameter: U(30),
 		}}
 
 	frameIdx := 0

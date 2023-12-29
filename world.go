@@ -2,64 +2,25 @@ package bakoko
 
 import (
 	"bytes"
-	"math"
+	. "playful-patterns.com/bakoko/ints"
 )
 
-type Real = float64
-type Int = int64
-
-const Unit = Int(1000)
-
-type Point struct {
-	X, Y Int
-}
-
-func (p *Point) DistTo(other Point) Int {
-	dx := p.X - other.X
-	dy := p.Y - other.Y
-	return Int(math.Sqrt(Real(dx*dx + dy*dy)))
-}
-
-func (p *Point) Add(other Point) {
-	p.X += other.X
-	p.Y += other.Y
-}
-
-func (p *Point) Mul(factor Real) Point {
-	p.X = Int(Real(p.X) * factor)
-	p.Y = Int(Real(p.Y) * factor)
-	return *p
-}
-
-func (p *Point) Len() Int {
-	return Int(math.Sqrt(Real(p.X*p.X + p.Y*p.Y)))
-}
-
-func (p *Point) To(other Point) Point {
-	return Point{other.X - p.X, other.Y - p.Y}
-}
-
-func (p *Point) Norm() Point {
-	p.Mul(Real(Unit) / Real(p.Len()))
-	return *p
-}
-
 type Ball struct {
-	Pos            Point
+	Pos            Pt
 	Diameter       Int
-	Speed          Point
+	Speed          Pt
 	CanBeCollected bool
 }
 
-type Character struct {
-	Pos      Point
+type Player struct {
+	Pos      Pt
 	Diameter Int
 	NBalls   Int
 }
 
 type World struct {
-	Player1 Character
-	Player2 Character
+	Player1 Player
+	Player2 Player
 	Balls   []Ball
 }
 
@@ -67,7 +28,7 @@ func (w *World) Serialize() []byte {
 	buf := new(bytes.Buffer)
 	Serialize(buf, w.Player1)
 	Serialize(buf, w.Player2)
-	Serialize(buf, Int(len(w.Balls)))
+	Serialize(buf, I(int64(len(w.Balls))))
 	Serialize(buf, w.Balls)
 	return buf.Bytes()
 }
@@ -77,7 +38,7 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &w.Player2)
 	var lenBalls Int
 	Deserialize(buf, &lenBalls)
-	w.Balls = make([]Ball, lenBalls)
+	w.Balls = make([]Ball, lenBalls.ToInt64())
 	Deserialize(buf, w.Balls)
 }
 
@@ -97,7 +58,7 @@ type Input struct {
 	MoveUp    bool
 	MoveDown  bool
 	Shoot     bool
-	ShootPt   Point
+	ShootPt   Pt
 }
 
 func (i *Input) SerializeToFile(filename string) {
@@ -112,64 +73,64 @@ func (i *Input) DeserializeFromFile(filename string) {
 	Deserialize(buf, i)
 }
 
-func HandlePlayerBallInteraction(player *Character, balls *[]Ball) {
+func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 	var newBalls []Ball
 	for _, ball := range *balls {
-		maxDist := (ball.Diameter + player.Diameter) / 2
-		if player.Pos.DistTo(ball.Pos) > maxDist || !ball.CanBeCollected {
+		maxDist := ball.Diameter.Plus(player.Diameter).DivBy(I(2))
+		squaredMaxDist := maxDist.Sqr()
+		if player.Pos.SquaredDistTo(ball.Pos).Gt(squaredMaxDist) || !ball.
+			CanBeCollected {
 			newBalls = append(newBalls, ball)
 		} else {
-			player.NBalls++
+			player.NBalls.Inc()
 		}
 	}
 	*balls = newBalls
 }
 
-func ShootBall(player *Character, balls *[]Ball, pt Point) {
-	if player.NBalls <= 0 {
+func ShootBall(player *Player, balls *[]Ball, pt Pt) {
+	if player.NBalls.Leq(I(0)) {
 		return
 	}
 
 	speed := player.Pos.To(pt)
-	speed.Norm()
-	speed.Mul(3)
+	speed.SetLen(MU(3000))
 
 	ball := Ball{
-		//Pos:            Point{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
+		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
 		Pos:            player.Pos,
-		Diameter:       30 * Unit,
+		Diameter:       U(30),
 		Speed:          speed,
 		CanBeCollected: false,
 	}
 	*balls = append(*balls, ball)
-	player.NBalls--
+	player.NBalls.Dec()
 }
 
 func (w *World) Step(input *Input, frameIdx int) {
 	if input.MoveRight {
-		w.Player1.Pos.X += Unit
+		w.Player1.Pos.X.Add(U(3))
 	}
 	if input.MoveLeft {
-		w.Player1.Pos.X -= Unit
+		w.Player1.Pos.X.Subtract(U(3))
 	}
 	if input.MoveUp {
-		w.Player1.Pos.Y -= Unit
+		w.Player1.Pos.Y.Subtract(U(3))
 	}
 	if input.MoveDown {
-		w.Player1.Pos.Y += Unit
+		w.Player1.Pos.Y.Add(U(3))
 	}
-	if input.Shoot || frameIdx == 20 {
-		ShootBall(&w.Player1, &w.Balls, input.ShootPt.Mul(Real(Unit)))
+	if input.Shoot || frameIdx == 10 {
+		ShootBall(&w.Player1, &w.Balls, input.ShootPt)
 	}
 
 	for idx := range w.Balls {
 		ball := &w.Balls[idx]
-		if ball.Speed.Len() > 0 {
+		if ball.Speed.SquaredLen().Gt(I(0)) {
 			ball.Pos.Add(ball.Speed)
-			factor := Real(ball.Speed.Len()-30) / Real(ball.Speed.Len())
-			ball.Speed.Mul(factor)
+			ball.Speed.AddLen(I(-300))
 		}
-		if !ball.CanBeCollected && ball.Speed.Len() < 100 {
+		if !ball.CanBeCollected && ball.Speed.SquaredLen().Lt(MU(100)) {
 			ball.CanBeCollected = true
 		}
 	}
