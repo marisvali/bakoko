@@ -16,15 +16,21 @@ in this package (e.g. c := a.Plus(b) instead of c := a + b)
 
 This means:
 - your code will be full of function calls instead of nice math operators
+- this applies to comparison operators as well
 - you only find out at runtime if you have an overflow
 - you only get to crash on overflow
 
 Go doesn't support operator overloading so this is the best solution I could
 think of.
 
+The reason Int is a struct and not a type alias is because I wanted to make
+sure I won't use + * - / on an Int by accident anywhere. In order to be 100%
+sure I am restricted everywhere, I need to restrict all built-in math
+operators. Unfortunately this also includes comparison operators.
+
 Performance hit:
 Checking for overflow makes int operations 3 to 6.5 times slower.
-Benchmarked on an Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz, 2208 Mhz).
+Benchmarked on an Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz, 2208 Mhz.
 
 The concrete problem that started this package:
 I want to have games where all the world is simulated using only integers. This
