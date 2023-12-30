@@ -128,7 +128,7 @@ func (w *World) Step(input *Input, frameIdx int) {
 		ball := &w.Balls[idx]
 		if ball.Speed.SquaredLen().Gt(I(0)) {
 			ball.Pos.Add(ball.Speed)
-			ball.Speed.AddLen(I(-300))
+			ball.Speed.AddLen(MU(-600))
 		}
 		if !ball.CanBeCollected && ball.Speed.SquaredLen().Lt(MU(100)) {
 			ball.CanBeCollected = true
