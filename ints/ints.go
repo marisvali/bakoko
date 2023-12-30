@@ -1,3 +1,90 @@
+/*
+ints provides integer operations that check for overflow.
+
+The general problem:
+You want to do integer operations and you want to make sure you never overflow.
+You plan to do too many such operations and you don't want to check each one
+or analyze each one to be 100% sure you won't overflow.
+
+The solution provided by this package:
+- an Int type is defined, which is just a wrapper for an int64
+- use Int in your code when you want to check for overflow
+- arithmetic operations on Int can be done only through functions defined
+in this package (e.g. c := a.Plus(b) instead of c := a + b)
+- the functions do the arithmetic operation and check for overflow
+- on overflow, the function panics
+
+This means:
+- your code will be full of function calls instead of nice math operators
+- you only find out at runtime if you have an overflow
+- you only get to crash on overflow
+
+Go doesn't support operator overloading so this is the best solution I could
+think of.
+
+Performance hit:
+Checking for overflow makes int operations 3 to 6.5 times slower.
+Benchmarked on an Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz, 2208 Mhz).
+
+The concrete problem that started this package:
+I want to have games where all the world is simulated using only integers. This
+means all operations need to be done on integers only. This ensures that my game
+will be deterministic and act exactly the same on all processors. This means
+recording a playthrough is cheap. I only need the input from the player, which
+is always only a few bytes per frame (mouse and keyboard states).
+
+Advantages of deterministic simulations:
+- I can see exactly what the player experienced.
+- I have perfect debug information. I can re-create the same code execution on
+my machine, so I can recreate a bug and debug it.
+- I can refactor my simulation code easily. I need to create some playthroughs
+stored as a sequence of inputs, Then I run the playthroughs quickly without any
+interface and check that the state of the world at the end is the same before
+and after any refactoring work.
+- I can have automated tests to protect against previous bugs.
+- I can develop AI algorithms that play the game and have them play many games
+without an interface. If I ever want to analyze a game, I can view it easily.
+
+Other alternatives for recording playthroughs:
+Alternative 1: record video.
+Pros:
+- I can see what the player experienced.
+Cons:
+- It takes a lot of processing power to record.
+- It takes even more processing power to encode the video on the fly.
+- Without encoding on the fly the raw video will be very large.
+- Even the final encoded video will be large to upload from the test user to
+my server and store on my server.
+- I don't have any insight on what my variables looked like during the
+playthrough, which would be nice for debugging or understanding things.
+- I can only analyze the video visually and manually, I can't run algorithms to
+extract metrics from it.
+
+Alternative 2: record world state. Either at each frame or every X frames.
+Pros:
+- Much cheaper than video.
+- Less information but more precise.
+- I can use algorithms to analyze the information.
+Cons:
+- I can only see things like the position of every item and character at a
+certain moment. I can't see the state of every algorithm (pathfinding, AI etc).
+That would require a full memory dump at every frame, which would very
+expensive.
+
+Alternative 3: record events and metrics.
+Pros:
+- This is definitely the cheapest option.
+Cons:
+- Much less information.
+- I have to decide what to measure before I see players play my game. But I
+need to see how players play before I understand what might be interesting to
+record. From past experience I know that without seeing them play it's very
+hard to understand some of the metrics.
+- You need many players before you can have trends which can then give you
+insight. So now you are spying on a lot of people so that you get a little bit
+of insight from each one, instead of deeply analyzing a few people and getting
+most of your insight that way.
+*/
 package ints
 
 import (
