@@ -214,7 +214,7 @@ func (a Int) DivBy(b Int) Int {
 }
 
 func (a Int) Sqr() Int {
-	return Int{a.Val * a.Val}
+	return a.Times(a)
 }
 
 /**
@@ -260,5 +260,9 @@ func (a Int) Sqr() Int {
 // reaching above is only with the power of two above the input number from
 // what I've seen in tests, but who knows if that holds true every time
 func (a Int) Sqrt() Int {
-	return Int{int64(math.Sqrt(float64(a.Val)))}
+	res := math.Sqrt(float64(a.Val))
+	if math.IsNaN(res) {
+		panic(fmt.Errorf("sqrt failed (got NaN) for: %d", a.Val))
+	}
+	return Int{int64(res)}
 }
