@@ -6,14 +6,18 @@ type A struct {
 	val int
 }
 
-func (a A) do() A {
-	a.val = a.val + 1
-	return a
+func do(x *[]int) {
+	*x = append(*x, 13)
+
+	//x[2] = 13
 }
 
 func main() {
-	var x A
-	a := x.do().do().do()
+	var x []int
+	x = append(x, 1)
+	x = append(x, 3)
+	x = append(x, 5)
+	x = append(x, 7)
+	do(&x)
 	fmt.Println(x)
-	fmt.Println(a)
 }
