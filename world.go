@@ -59,6 +59,7 @@ type Input struct {
 	MoveDown  bool
 	Shoot     bool
 	ShootPt   Pt
+	Quit      bool
 }
 
 func (i *Input) SerializeToFile(filename string) {
@@ -94,7 +95,7 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 	}
 
 	speed := player.Pos.To(pt)
-	speed.SetLen(MU(3000))
+	speed.SetLen(MU(6000))
 
 	ball := Ball{
 		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
@@ -105,6 +106,23 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 	}
 	*balls = append(*balls, ball)
 	player.NBalls.Dec()
+}
+
+func SerializeInputs(inputs []Input, filename string) {
+	buf := new(bytes.Buffer)
+	Serialize(buf, int64(len(inputs)))
+	Serialize(buf, inputs)
+	WriteFile(filename, buf.Bytes())
+}
+
+func DeserializeInputs(filename string) []Input {
+	var inputs []Input
+	buf := bytes.NewBuffer(ReadFile(filename))
+	var lenInputs Int
+	Deserialize(buf, &lenInputs)
+	inputs = make([]Input, lenInputs.ToInt64())
+	Deserialize(buf, inputs)
+	return inputs
 }
 
 func (w *World) Step(input *Input, frameIdx int) {
@@ -120,7 +138,7 @@ func (w *World) Step(input *Input, frameIdx int) {
 	if input.MoveDown {
 		w.Player1.Pos.Y.Add(U(3))
 	}
-	if input.Shoot || frameIdx == 10 {
+	if input.Shoot {
 		ShootBall(&w.Player1, &w.Balls, input.ShootPt)
 	}
 
