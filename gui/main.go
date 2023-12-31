@@ -194,8 +194,9 @@ func main() {
 	g.ball = loadImage("sprites/ball.png")
 	g.player1 = loadImage("sprites/player1.png")
 	g.player2 = loadImage("sprites/player2.png")
-	ebiten.SetWindowSize(300, 300)
+	ebiten.SetWindowSize(460, 460)
 	ebiten.SetWindowTitle("Viewer")
+	ebiten.SetWindowPosition(10, 1080-470)
 	err := ebiten.RunGame(&g)
 	Check(err)
 }
