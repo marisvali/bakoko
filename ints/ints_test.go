@@ -80,6 +80,26 @@ func TestInt_DivBy(t *testing.T) {
 	assert.Panics(t, func() { I(math.MinInt64).DivBy(I(-1)) })
 }
 
+func TestInt_Mod(t *testing.T) {
+	assert.Equal(t, I(4).Mod(I(2)), I(0))
+	assert.Equal(t, I(3).Mod(I(2)), I(1))
+	assert.Equal(t, I(2).Mod(I(2)), I(0))
+	assert.Equal(t, I(1).Mod(I(2)), I(1))
+	assert.Equal(t, I(0).Mod(I(2)), I(0))
+	assert.Equal(t, I(17).Mod(I(5)), I(2))
+	assert.Equal(t, I(17).Mod(I(4)), I(1))
+	assert.Equal(t, I(29).Mod(I(5)), I(4))
+	assert.Equal(t, I(math.MaxInt64).Mod(I(2)), I(1))
+	assert.Equal(t, I(math.MaxInt64-1).Mod(I(math.MaxInt64)), I(math.MaxInt64))
+	assert.Panics(t, func() { I(123).Mod(I(0)) })
+}
+
+func TestInt_Abs(t *testing.T) {
+	assert.Equal(t, I(17).Abs(), I(17))
+	assert.Equal(t, I(-17).Abs(), I(17))
+	assert.Equal(t, I(0).Abs(), I(0))
+}
+
 func TestInt_Eq(t *testing.T) {
 	assert.True(t, I(123).Eq(I(123)))
 	assert.False(t, I(123).Eq(I(124)))
