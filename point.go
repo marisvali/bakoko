@@ -1,15 +1,19 @@
 package bakoko
 
-import . "playful-patterns.com/bakoko/ints"
+import (
+	. "playful-patterns.com/bakoko/ints"
+)
 
 type Pt struct {
 	X, Y Int
 }
 
-func (p *Pt) SquaredDistTo(other Pt) Int {
-	dx := p.X.Minus(other.X)
-	dy := p.Y.Minus(other.Y)
-	return dx.Sqr().Plus(dy.Sqr())
+func IPt(x, y int64) Pt {
+	return Pt{I(x), I(y)}
+}
+
+func (p Pt) SquaredDistTo(other Pt) Int {
+	return p.To(other).SquaredLen()
 }
 
 func (p *Pt) Add(other Pt) {
@@ -17,36 +21,36 @@ func (p *Pt) Add(other Pt) {
 	p.Y = p.Y.Plus(other.Y)
 }
 
-func (p *Pt) Scale(multiply Int, divide Int) Pt {
+func (p *Pt) Scale(multiply Int, divide Int) {
 	p.X = p.X.Times(multiply).DivBy(divide)
 	p.Y = p.Y.Times(multiply).DivBy(divide)
-	return *p
 }
 
-func (p *Pt) AddLen(extraLen Int) {
-	oldLenSquared := p.SquaredLen()
-	newLenSquared := oldLenSquared.Minus(extraLen.Sqr())
-	if newLenSquared.Lt(I(0)) {
-		newLenSquared = I(0)
-	}
-	p.Scale(newLenSquared, oldLenSquared)
-}
-
-func (p *Pt) SquaredLen() Int {
+func (p Pt) SquaredLen() Int {
 	return p.X.Sqr().Plus(p.Y.Sqr())
 }
 
-func (p *Pt) Len() Int {
+func (p Pt) Len() Int {
 	return p.SquaredLen().Sqrt()
 }
 
-func (p *Pt) To(other Pt) Pt {
+func (p Pt) To(other Pt) Pt {
 	return Pt{other.X.Minus(p.X), other.Y.Minus(p.Y)}
 }
 
-func (p *Pt) SetLen(newLen Int) Pt {
+func (p *Pt) SetLen(newLen Int) {
 	oldLen := p.Len()
-	p.X = p.X.Times(newLen).DivBy(oldLen)
-	p.Y = p.Y.Times(newLen).DivBy(oldLen)
-	return *p
+	if oldLen.Eq(I(0)) {
+		return
+	}
+	p.Scale(newLen, oldLen)
+}
+
+func (p *Pt) AddLen(extraLen Int) {
+	oldLen := p.Len()
+	newLen := oldLen.Plus(extraLen)
+	if newLen.Lt(I(0)) {
+		newLen = I(0)
+	}
+	p.Scale(newLen, oldLen)
 }
