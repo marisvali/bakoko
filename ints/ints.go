@@ -155,6 +155,14 @@ func (a *Int) Dec() {
 	a.Val--
 }
 
+func (a Int) Abs() Int {
+	if a.Val < 0 {
+		return Int{-a.Val}
+	} else {
+		return a
+	}
+}
+
 func (a Int) Plus(b Int) Int {
 	c := Int{a.Val + b.Val}
 	if (c.Val > a.Val) == (b.Val > 0) {
@@ -211,6 +219,13 @@ func (a Int) DivBy(b Int) Int {
 		panic(fmt.Errorf("division overflow: %d %d", a, b))
 	}
 	return Int{a.Val / b.Val}
+}
+
+func (a Int) Mod(b Int) Int {
+	if b.Val == 0 {
+		panic(fmt.Errorf("division by zero during modulo: %d %d", a, b))
+	}
+	return Int{a.Val % b.Val}
 }
 
 func (a Int) Sqr() Int {
