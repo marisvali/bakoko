@@ -16,12 +16,14 @@ func init() {
 		Pos:      UPt(60, 260),
 		Diameter: U(50),
 		NBalls:   I(3),
-		BallType: I(1)}
+		BallType: I(1),
+		Health:   I(3)}
 	w.Player2 = Player{
 		Pos:      UPt(180, 60),
 		Diameter: U(50),
 		NBalls:   I(3),
-		BallType: I(2)}
+		BallType: I(2),
+		Health:   I(3)}
 	w.Balls = []Ball{
 		{
 			Pos:      UPt(120, 70),

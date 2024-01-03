@@ -18,6 +18,7 @@ type Player struct {
 	Diameter Int
 	NBalls   Int
 	BallType Int
+	Health   Int
 }
 
 type World struct {

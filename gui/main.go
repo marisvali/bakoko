@@ -134,7 +134,12 @@ func DrawCircle(screen *ebiten.Image, img *ebiten.Image, x float64, y float64,
 	screen.DrawImage(dbgImg, op)
 }
 
-func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, player *Player) {
+func DrawPlayer(
+	screen *ebiten.Image,
+	playerImage *ebiten.Image,
+	ballImage *ebiten.Image,
+	healthImage *ebiten.Image,
+	player *Player) {
 	// Draw the player sprite.
 	x := WorldToScreenFloat(player.Pos.X)
 	y := WorldToScreenFloat(player.Pos.Y)
@@ -146,7 +151,15 @@ func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, player *Player)
 		smallX := x - diam/2 - 10
 		smallY := y + float64(idx*12) - diam/2 + 10
 		smallDiam := float64(10)
-		DrawCircle(screen, playerImage, smallX, smallY, smallDiam)
+		DrawCircle(screen, ballImage, smallX, smallY, smallDiam)
+	}
+
+	// Draw a small sprite for each health point that the player has.
+	for idx := int64(0); idx < player.Health.ToInt64(); idx++ {
+		smallX := x + float64(idx*12) - diam/2 + 15
+		smallY := y - diam/2 - 10
+		smallDiam := float64(10)
+		DrawCircle(screen, healthImage, smallX, smallY, smallDiam)
 	}
 }
 
@@ -154,8 +167,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Background.
 	screen.Fill(colorNeutralLight1)
 
-	DrawPlayer(screen, g.player1, &g.w.Player1)
-	DrawPlayer(screen, g.player2, &g.w.Player2)
+	DrawPlayer(screen, g.player1, g.ball1, g.health, &g.w.Player1)
+	DrawPlayer(screen, g.player2, g.ball1, g.health, &g.w.Player2)
 	for _, ball := range g.w.Balls {
 		ballImage := g.ball1
 		if ball.Type.Eq(I(2)) {
@@ -188,6 +201,7 @@ type Game struct {
 	player2 *ebiten.Image
 	ball1   *ebiten.Image
 	ball2   *ebiten.Image
+	health  *ebiten.Image
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -206,6 +220,7 @@ func main() {
 	g.ball2 = loadImage("sprites/ball2.png")
 	g.player1 = loadImage("sprites/player1.png")
 	g.player2 = loadImage("sprites/player2.png")
+	g.health = loadImage("sprites/health.png")
 	ebiten.SetWindowSize(460, 460)
 	ebiten.SetWindowTitle("Viewer")
 	ebiten.SetWindowPosition(10, 1080-470)
