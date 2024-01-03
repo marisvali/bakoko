@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
+	"net"
 	. "playful-patterns.com/bakoko"
 	"time"
 )
@@ -126,7 +128,79 @@ func GetNewRecordingFile() string {
 	panic("Cannot record, no available filename found.")
 }
 
+type interfacePeer struct {
+	conn net.Conn
+}
+
+func (p *interfacePeer) getInput() Input {
+	// Keep trying to get an input from a peer.
+	for {
+		// If we don't have a peer, wait until we get one.
+		if p.conn == nil {
+			// Listen for incoming connections
+			listener, err := net.Listen("tcp", "localhost:56901")
+			Check(err)
+
+			// Accept one incoming connection.
+			p.conn, err = listener.Accept()
+			Check(err)
+
+			listener.Close()
+		}
+
+		// Try to get data from our peer.
+		data, err := ReadData(p.conn)
+		if err != nil {
+			// There was an error. Nevermind, close the connection and wait
+			// for a new one.
+			p.conn.Close()
+			p.conn = nil
+			continue // Wait for a peer again.
+		}
+
+		// Finally, we can return the input.
+		var input Input
+		Deserialize(bytes.NewBuffer(data), &input)
+		return input
+	}
+}
+
+// Doesn't matter if this fails.
+func (p *interfacePeer) sendWorld(w *World) {
+	// Don't do anything if we don't have a peer.
+	// The communication between us and the peer is always that:
+	// - the peer connects
+	// - we get input from the peer
+	// - we send an ouput to the peer
+	// If the peer disconnects in middle of that, we start from the beginning,
+	// we don't accept a connection then continue with sending the output.
+	if p.conn == nil {
+		return
+	}
+
+	data := w.Serialize()
+
+	err := WriteData(p.conn, data)
+	if err != nil {
+		p.conn = nil
+	}
+}
+
 func main() {
+	frameIdx := 0
+	peer := interfacePeer{}
+	for w.Over.Eq(I(0)) {
+		input := peer.getInput()
+		w.Step(&input, frameIdx)
+		peer.sendWorld(&w)
+
+		if input.Player1Input.Quit || input.Player2Input.Quit {
+			break
+		}
+	}
+}
+
+func main77() {
 	//if utils.FileExists("world.bin") {
 	//	w.DeserializeFromFile("world.bin")
 	//}
@@ -141,7 +215,13 @@ func main() {
 		playbackInputs = DeserializeInputs(playbackFile)
 	}
 
+	DeleteFile("world-ready")
+	// Race condition here: the GUI might already have started reading
+	// world.bin, before we got a chance to tell it to stop.
+	// So wait until it is done with that, if it is ever done with that.
+	time.Sleep(50 * time.Millisecond)
 	w.SerializeToFile("world.bin")
+	TouchFile("world-ready")
 	recordingFile := GetNewRecordingFile()
 	frameIdx := 0
 	for ; !input.Player1Input.Quit &&

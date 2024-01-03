@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"image"
 	"image/color"
+	"net"
 	"os"
 	. "playful-patterns.com/bakoko"
 	. "playful-patterns.com/bakoko/ints"
 	"slices"
+	"time"
 )
 
 func colorHex(hexVal int) color.Color {
@@ -45,6 +48,61 @@ var colorNeutralLight1 = colorHex(0x2e2e2e)
 var colorNeutralLight2 = colorHex(0x808080)
 var colorNeutralLight3 = colorHex(0xdedede)
 
+type simulationPeer struct {
+	conn net.Conn
+}
+
+// Doesn't matter if this fails.
+func (p *simulationPeer) getWorld(w *World) {
+	// Don't do anything if we don't have a peer.
+	// The communication between us and the peer is always that:
+	// - we connect to the peer
+	// - we send input to the peer
+	// - we get an ouput from the peer
+	// If the peer disconnects in middle of that, we start from the beginning,
+	// we don't accept a connection then continue with getting the output.
+	if p.conn == nil {
+		return
+	}
+
+	data, err := ReadData(p.conn)
+	// If there was an error, assume the peer is no longer available.
+	// Invalidate the connection and try again later.
+	if err != nil {
+		p.conn = nil
+		return
+	}
+
+	w.Deserialize(bytes.NewBuffer(data))
+}
+
+// Try to send an input to the peer, but don't block.
+func (p *simulationPeer) sendInput(input *Input) {
+	// If we don't have a peer, connect to one.
+	if p.conn == nil {
+		var err error
+		p.conn, err = net.DialTimeout("tcp", "localhost:56901",
+			5*time.Millisecond)
+
+		// If connection took too long or failed, screw it.
+		// We'll try again later.
+		if err != nil {
+			return
+		}
+	}
+
+	// We have a connection, try to send our input.
+	buf := new(bytes.Buffer)
+	Serialize(buf, input)
+
+	err := WriteData(p.conn, buf.Bytes())
+	// If there was an error, assume the peer is no longer available.
+	// Invalidate the connection and try again later.
+	if err != nil {
+		p.conn = nil
+	}
+}
+
 func (g *Game) Update() error {
 	var input Input
 
@@ -75,10 +133,14 @@ func (g *Game) Update() error {
 	}
 
 	//g.w.Step(&input)
-	input.SerializeToFile("input.bin")
-	TouchFile("input-ready")
-	WaitForFile("world-ready")
-	g.w.DeserializeFromFile("world.bin")
+	g.peer.sendInput(&input)
+	//var w World
+	//g.peer.getWorld(&w)
+	g.peer.getWorld(&g.w)
+	//input.SerializeToFile("input.bin")
+	//TouchFile("input-ready")
+	//WaitForFile("world-ready")
+	//g.w.DeserializeFromFile("world.bin")
 	return nil
 }
 
@@ -202,6 +264,7 @@ type Game struct {
 	ball1   *ebiten.Image
 	ball2   *ebiten.Image
 	health  *ebiten.Image
+	peer    simulationPeer
 }
 
 func loadImage(str string) *ebiten.Image {

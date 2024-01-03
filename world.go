@@ -25,6 +25,7 @@ type World struct {
 	Player1 Player
 	Player2 Player
 	Balls   []Ball
+	Over    Int
 }
 
 type PlayerInput struct {
@@ -88,6 +89,7 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 	}
 
 	speed := player.Pos.To(pt)
+	//speed.SetLen(MU(6000))
 	speed.SetLen(MU(6000))
 
 	ball := Ball{
