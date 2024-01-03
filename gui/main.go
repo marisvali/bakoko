@@ -49,23 +49,29 @@ func (g *Game) Update() error {
 	var input Input
 
 	// Get keyboard input.
-	var keys []ebiten.Key
-	keys = inpututil.AppendPressedKeys(keys)
-	input.MoveLeft = slices.Contains(keys, ebiten.KeyA)
-	input.MoveUp = slices.Contains(keys, ebiten.KeyW)
-	input.MoveDown = slices.Contains(keys, ebiten.KeyS)
-	input.MoveRight = slices.Contains(keys, ebiten.KeyD)
+	var pressedKeys []ebiten.Key
+	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
+	// Choose which is the active player based on Alt being pressed.
+	playerInput := &input.Player1Input
+	if slices.Contains(pressedKeys, ebiten.KeyAlt) {
+		playerInput = &input.Player2Input
+	}
 
-	var keys2 []ebiten.Key
-	keys2 = inpututil.AppendJustPressedKeys(keys2)
+	playerInput.MoveLeft = slices.Contains(pressedKeys, ebiten.KeyA)
+	playerInput.MoveUp = slices.Contains(pressedKeys, ebiten.KeyW)
+	playerInput.MoveDown = slices.Contains(pressedKeys, ebiten.KeyS)
+	playerInput.MoveRight = slices.Contains(pressedKeys, ebiten.KeyD)
+
+	var justPressedKeys []ebiten.Key
+	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 
 	// Get mouse input.
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
-		input.Shoot = true
+		playerInput.Shoot = true
 		x, y := ebiten.CursorPosition()
 		// Translate from screen coordinates to in-world units.
-		input.ShootPt.X = ScreenToWorld(x)
-		input.ShootPt.Y = ScreenToWorld(y)
+		playerInput.ShootPt.X = ScreenToWorld(x)
+		playerInput.ShootPt.Y = ScreenToWorld(y)
 	}
 
 	//g.w.Step(&input)
@@ -151,7 +157,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	DrawPlayer(screen, g.player1, &g.w.Player1)
 	DrawPlayer(screen, g.player2, &g.w.Player2)
 	for _, ball := range g.w.Balls {
-		DrawCircle(screen, g.ball,
+		ballImage := g.ball1
+		if ball.Type.Eq(I(2)) {
+			ballImage = g.ball2
+		}
+		DrawCircle(screen, ballImage,
 			WorldToScreenFloat(ball.Pos.X),
 			WorldToScreenFloat(ball.Pos.Y),
 			WorldToScreenFloat(ball.Diameter))
@@ -176,7 +186,8 @@ type Game struct {
 	w       World
 	player1 *ebiten.Image
 	player2 *ebiten.Image
-	ball    *ebiten.Image
+	ball1   *ebiten.Image
+	ball2   *ebiten.Image
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -191,7 +202,8 @@ func loadImage(str string) *ebiten.Image {
 
 func main() {
 	var g Game
-	g.ball = loadImage("sprites/ball.png")
+	g.ball1 = loadImage("sprites/ball1.png")
+	g.ball2 = loadImage("sprites/ball2.png")
 	g.player1 = loadImage("sprites/player1.png")
 	g.player2 = loadImage("sprites/player2.png")
 	ebiten.SetWindowSize(460, 460)

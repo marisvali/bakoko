@@ -6,6 +6,7 @@ import (
 )
 
 type Ball struct {
+	Type           Int
 	Pos            Pt
 	Diameter       Int
 	Speed          Pt
@@ -16,12 +17,28 @@ type Player struct {
 	Pos      Pt
 	Diameter Int
 	NBalls   Int
+	BallType Int
 }
 
 type World struct {
 	Player1 Player
 	Player2 Player
 	Balls   []Ball
+}
+
+type PlayerInput struct {
+	MoveLeft  bool
+	MoveRight bool
+	MoveUp    bool
+	MoveDown  bool
+	Shoot     bool
+	ShootPt   Pt
+	Quit      bool
+}
+
+type Input struct {
+	Player1Input PlayerInput
+	Player2Input PlayerInput
 }
 
 func (w *World) Serialize() []byte {
@@ -52,16 +69,6 @@ func (w *World) DeserializeFromFile(filename string) {
 	w.Deserialize(buf)
 }
 
-type Input struct {
-	MoveLeft  bool
-	MoveRight bool
-	MoveUp    bool
-	MoveDown  bool
-	Shoot     bool
-	ShootPt   Pt
-	Quit      bool
-}
-
 func (i *Input) SerializeToFile(filename string) {
 	buf := new(bytes.Buffer)
 	Serialize(buf, i)
@@ -79,8 +86,9 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 	for _, ball := range *balls {
 		maxDist := ball.Diameter.Plus(player.Diameter).DivBy(I(2))
 		squaredMaxDist := maxDist.Sqr()
-		if player.Pos.SquaredDistTo(ball.Pos).Gt(squaredMaxDist) || !ball.
-			CanBeCollected {
+		if player.Pos.SquaredDistTo(ball.Pos).Gt(squaredMaxDist) ||
+			!ball.CanBeCollected ||
+			ball.Type.Neq(player.BallType) {
 			newBalls = append(newBalls, ball)
 		} else {
 			player.NBalls.Inc()
@@ -103,6 +111,7 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 		Diameter:       U(30),
 		Speed:          speed,
 		CanBeCollected: false,
+		Type:           player.BallType,
 	}
 	*balls = append(*balls, ball)
 	player.NBalls.Dec()
@@ -126,24 +135,17 @@ func DeserializeInputs(filename string) []Input {
 }
 
 func (w *World) Step(input *Input, frameIdx int) {
-	if input.MoveRight {
-		w.Player1.Pos.X.Add(U(3))
-	}
-	if input.MoveLeft {
-		w.Player1.Pos.X.Subtract(U(3))
-	}
-	if input.MoveUp {
-		w.Player1.Pos.Y.Subtract(U(3))
-	}
-	if input.MoveDown {
-		w.Player1.Pos.Y.Add(U(3))
-	}
-	if input.Shoot {
-		ShootBall(&w.Player1, &w.Balls, input.ShootPt)
-	}
+	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input)
+	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input)
+	UpdateBallPositions(w.Balls)
+	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
+	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
+}
 
-	for idx := range w.Balls {
-		ball := &w.Balls[idx]
+func UpdateBallPositions(balls []Ball) {
+	// update the state of each ball (move it, make it collectible)
+	for idx := range balls {
+		ball := &balls[idx]
 		if ball.Speed.SquaredLen().Gt(I(0)) {
 			ball.Pos.Add(ball.Speed)
 			ball.Speed.AddLen(MU(-60))
@@ -152,7 +154,22 @@ func (w *World) Step(input *Input, frameIdx int) {
 			ball.CanBeCollected = true
 		}
 	}
+}
 
-	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
-	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
+func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
+	if input.MoveRight {
+		player.Pos.X.Add(U(3))
+	}
+	if input.MoveLeft {
+		player.Pos.X.Subtract(U(3))
+	}
+	if input.MoveUp {
+		player.Pos.Y.Subtract(U(3))
+	}
+	if input.MoveDown {
+		player.Pos.Y.Add(U(3))
+	}
+	if input.Shoot {
+		ShootBall(player, balls, input.ShootPt)
+	}
 }
