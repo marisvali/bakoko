@@ -90,7 +90,7 @@ func TestInt_Mod(t *testing.T) {
 	assert.Equal(t, I(17).Mod(I(4)), I(1))
 	assert.Equal(t, I(29).Mod(I(5)), I(4))
 	assert.Equal(t, I(math.MaxInt64).Mod(I(2)), I(1))
-	assert.Equal(t, I(math.MaxInt64-1).Mod(I(math.MaxInt64)), I(math.MaxInt64))
+	assert.Equal(t, I(math.MaxInt64-1).Mod(I(math.MaxInt64)), I(math.MaxInt64-1))
 	assert.Panics(t, func() { I(123).Mod(I(0)) })
 }
 
@@ -169,13 +169,20 @@ func TestInt_Sqrt(t *testing.T) {
 	// the number for which it has to find the square root.
 	// This is not an exhaustive check but it's good enough to provide some
 	// confidence.
-	for i := int64(0); i < 2; i++ {
+	for i := int64(0); i < 20; i++ {
 		nr := math.MaxInt64 - i
-		assert.Equal(t, I(nr).Sqrt(), I(int64(math.Sqrt(float64(nr)))))
+		res1 := I(nr).Sqrt()
+		res2 := I(int64(math.Sqrt(float64(nr))))
+		// we have to allow for a difference of 1 because the float sqrt has
+		// some rounding errors and sometimes reports the integer above instead
+		// of the one below
+		assert.True(t, res1.Minus(res2).Abs().Lt(I(1)))
 	}
 	for i := int64(0); i < 100; i++ {
 		nr := math.MaxInt64 - i*1000000
-		assert.Equal(t, I(nr).Sqrt(), I(int64(math.Sqrt(float64(nr)))))
+		res1 := I(nr).Sqrt()
+		res2 := I(int64(math.Sqrt(float64(nr))))
+		assert.True(t, res1.Minus(res2).Abs().Lt(I(1)))
 	}
 }
 

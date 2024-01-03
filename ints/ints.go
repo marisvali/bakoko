@@ -233,7 +233,7 @@ func (a Int) Sqr() Int {
 }
 
 /**
- * \brief    Fast Square root algorithm
+ * Fast Square root algorithm
  *
  * Fractional parts of the answer are discarded. That is:
  *      - SquareRoot(3) --> 1
@@ -241,43 +241,41 @@ func (a Int) Sqr() Int {
  *      - SquareRoot(5) --> 2
  *      - SquareRoot(8) --> 2
  *      - SquareRoot(9) --> 3
- *
- * \param[in] a_nInput - unsigned integer for which to find the square root
- *
- * \return Integer square root of the input value.
  */
-//func (a Int) Sqrt() Int {
-//	op := a.Val
-//	res := int64(0)
-//	// The second-to-top bit is set: use 1 << 14 for int16; use 1 << 30 for
-//	// int32.
-//	one := int64(1) << 62
-//
-//	// "one" starts at the highest power of four <= than the argument.
-//	for one > op {
-//		one >>= 2
-//	}
-//
-//	for one != 0 {
-//		if op >= res+one {
-//			op = op - (res + one)
-//			res = res + 2*one
-//		}
-//		res >>= 1
-//		one >>= 2
-//	}
-//	return Int{res}
-//}
-// TODO: come back and find an integer-only sqrt algorithm
-// the commented method above seems to be fine but can reach numbers above
-// the number you give it as input, so I'm not sure when and if it overflows
-// might not overflow ever since math.MaxInt64 is a power of two and the
-// reaching above is only with the power of two above the input number from
-// what I've seen in tests, but who knows if that holds true every time
-func (a Int) Sqrt() Int {
-	res := math.Sqrt(float64(a.Val))
-	if math.IsNaN(res) {
-		panic(fmt.Errorf("sqrt failed (got NaN) for: %d", a.Val))
+func sqrt(a uint64) uint32 {
+	op := a
+	res := uint64(0)
+	// The second-to-top bit is set: use 1 << 14 for uint16; use 1 << 30 for
+	// uint32.
+	one := uint64(1) << 62
+
+	// "one" starts at the highest power of four <= than the argument.
+	for one > op {
+		one >>= 2
 	}
-	return Int{int64(res)}
+
+	for one != 0 {
+		if op >= res+one {
+			op = op - (res + one)
+			res = res + 2*one
+		}
+		res >>= 1
+		one >>= 2
+	}
+	return uint32(res)
+}
+
+func (a Int) Sqrt() Int {
+	// float square root - faster but (potential) non-deterministic
+	//res := math.Sqrt(float64(a.Val))
+	//if math.IsNaN(res) {
+	//	panic(fmt.Errorf("sqrt failed (got NaN) for: %d", a.Val))
+	//}
+	//return Int{int64(res)}
+
+	// int square root - 5 times slower than floats, but deterministic
+	if a.Val < 0 {
+		panic(fmt.Errorf("attempted to get square root of negative number: %d", a.Val))
+	}
+	return Int{int64(sqrt(uint64(a.Val)))}
 }
