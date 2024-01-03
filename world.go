@@ -82,22 +82,6 @@ func (i *Input) DeserializeFromFile(filename string) {
 	Deserialize(buf, i)
 }
 
-func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
-	var newBalls []Ball
-	for _, ball := range *balls {
-		maxDist := ball.Diameter.Plus(player.Diameter).DivBy(I(2))
-		squaredMaxDist := maxDist.Sqr()
-		if player.Pos.SquaredDistTo(ball.Pos).Gt(squaredMaxDist) ||
-			!ball.CanBeCollected ||
-			ball.Type.Neq(player.BallType) {
-			newBalls = append(newBalls, ball)
-		} else {
-			player.NBalls.Inc()
-		}
-	}
-	*balls = newBalls
-}
-
 func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 	if player.NBalls.Leq(I(0)) {
 		return
@@ -173,4 +157,44 @@ func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
 	if input.Shoot {
 		ShootBall(player, balls, input.ShootPt)
 	}
+}
+
+func PlayerAndBallAreTouching(player Player, ball Ball) bool {
+	maxDist := ball.Diameter.Plus(player.Diameter).DivBy(I(2))
+	squaredMaxDist := maxDist.Sqr()
+	return player.Pos.SquaredDistTo(ball.Pos).Leq(squaredMaxDist)
+}
+
+func FriendlyBall(player Player, ball Ball) bool {
+	return player.BallType.Eq(ball.Type)
+}
+
+func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
+	toBeDeleted := make([]bool, len(*balls))
+	for idx, ball := range *balls {
+		if !PlayerAndBallAreTouching(*player, ball) {
+			continue
+		}
+
+		if FriendlyBall(*player, ball) {
+			if ball.CanBeCollected {
+				toBeDeleted[idx] = true
+				player.NBalls.Inc()
+			}
+		} else {
+			if player.Health.Gt(I(0)) {
+				player.Health.Dec()
+			}
+			toBeDeleted[idx] = true
+			player.NBalls.Inc()
+		}
+	}
+
+	var newBalls []Ball
+	for idx, ball := range *balls {
+		if !toBeDeleted[idx] {
+			newBalls = append(newBalls, ball)
+		}
+	}
+	*balls = newBalls
 }

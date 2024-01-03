@@ -168,7 +168,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorNeutralLight1)
 
 	DrawPlayer(screen, g.player1, g.ball1, g.health, &g.w.Player1)
-	DrawPlayer(screen, g.player2, g.ball1, g.health, &g.w.Player2)
+	DrawPlayer(screen, g.player2, g.ball2, g.health, &g.w.Player2)
 	for _, ball := range g.w.Balls {
 		ballImage := g.ball1
 		if ball.Type.Eq(I(2)) {
