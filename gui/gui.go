@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"image"
 	"image/color"
+	"log"
 	"net"
 	"os"
 	. "playful-patterns.com/bakoko"
@@ -49,7 +50,8 @@ var colorNeutralLight2 = colorHex(0x808080)
 var colorNeutralLight3 = colorHex(0xdedede)
 
 type simulationPeer struct {
-	conn net.Conn
+	endpoint string
+	conn     net.Conn
 }
 
 // Doesn't matter if this fails.
@@ -70,6 +72,7 @@ func (p *simulationPeer) getWorld(w *World) {
 	// Invalidate the connection and try again later.
 	if err != nil {
 		p.conn = nil
+		log.Println("lost connection")
 		return
 	}
 
@@ -77,19 +80,20 @@ func (p *simulationPeer) getWorld(w *World) {
 }
 
 // Try to send an input to the peer, but don't block.
-func (p *simulationPeer) sendInput(input *Input) {
+func (p *simulationPeer) sendInput(input *PlayerInput) {
 	// If we don't have a peer, connect to one.
 	if p.conn == nil {
 		var err error
-		p.conn, err = net.DialTimeout("tcp", "localhost:56901",
-			5*time.Millisecond)
+		p.conn, err = net.DialTimeout("tcp", p.endpoint, 5*time.Millisecond)
 
 		// If connection took too long or failed, screw it.
 		// We'll try again later.
 		if err != nil {
+			//log.Println("could not connect!")
 			return
 		}
 	}
+	//log.Println("connection established!")
 
 	// We have a connection, try to send our input.
 	buf := new(bytes.Buffer)
@@ -100,21 +104,16 @@ func (p *simulationPeer) sendInput(input *Input) {
 	// Invalidate the connection and try again later.
 	if err != nil {
 		p.conn = nil
+		log.Println("lost connection")
 	}
 }
 
 func (g *Game) Update() error {
-	var input Input
-
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
 	// Choose which is the active player based on Alt being pressed.
-	playerInput := &input.Player1Input
-	if slices.Contains(pressedKeys, ebiten.KeyAlt) {
-		playerInput = &input.Player2Input
-	}
-
+	playerInput := PlayerInput{}
 	playerInput.MoveLeft = slices.Contains(pressedKeys, ebiten.KeyA)
 	playerInput.MoveUp = slices.Contains(pressedKeys, ebiten.KeyW)
 	playerInput.MoveDown = slices.Contains(pressedKeys, ebiten.KeyS)
@@ -133,7 +132,7 @@ func (g *Game) Update() error {
 	}
 
 	//g.w.Step(&input)
-	g.peer.sendInput(&input)
+	g.peer.sendInput(&playerInput)
 	//var w World
 	//g.peer.getWorld(&w)
 	g.peer.getWorld(&g.w)
@@ -226,11 +225,26 @@ func DrawPlayer(
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	// Background.
+	// Background
 	screen.Fill(colorNeutralLight1)
 
+	// Obstacle grid
+	for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
+		for x := I(0); x.Lt(g.w.Obstacles.NCols()); x.Inc() {
+			if g.w.Obstacles.Get(y, x).Eq(I(1)) {
+				xScreen := WorldToScreenFloat(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+				yScreen := WorldToScreenFloat(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+				diameter := WorldToScreenFloat(g.w.ObstacleSize)
+				DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+			}
+		}
+	}
+
+	// Players
 	DrawPlayer(screen, g.player1, g.ball1, g.health, &g.w.Player1)
 	DrawPlayer(screen, g.player2, g.ball2, g.health, &g.w.Player2)
+
+	// Balls
 	for _, ball := range g.w.Balls {
 		ballImage := g.ball1
 		if ball.Type.Eq(I(2)) {
@@ -241,6 +255,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			WorldToScreenFloat(ball.Pos.Y),
 			WorldToScreenFloat(ball.Diameter))
 	}
+
 	//img1 := ebiten.NewImage(50, 50)
 	//img1.Fill(colorPrimary)
 	//op := &ebiten.DrawImageOptions{}
@@ -258,13 +273,14 @@ func init() {
 }
 
 type Game struct {
-	w       World
-	player1 *ebiten.Image
-	player2 *ebiten.Image
-	ball1   *ebiten.Image
-	ball2   *ebiten.Image
-	health  *ebiten.Image
-	peer    simulationPeer
+	w        World
+	peer     simulationPeer
+	player1  *ebiten.Image
+	player2  *ebiten.Image
+	ball1    *ebiten.Image
+	ball2    *ebiten.Image
+	health   *ebiten.Image
+	obstacle *ebiten.Image
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -279,11 +295,13 @@ func loadImage(str string) *ebiten.Image {
 
 func main() {
 	var g Game
+	g.peer.endpoint = os.Args[1] // localhost:56901 or localhost:56902
 	g.ball1 = loadImage("sprites/ball1.png")
 	g.ball2 = loadImage("sprites/ball2.png")
 	g.player1 = loadImage("sprites/player1.png")
 	g.player2 = loadImage("sprites/player2.png")
 	g.health = loadImage("sprites/health.png")
+	g.obstacle = loadImage("sprites/obstacle.png")
 	ebiten.SetWindowSize(460, 460)
 	ebiten.SetWindowTitle("Viewer")
 	ebiten.SetWindowPosition(10, 1080-470)

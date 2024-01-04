@@ -42,6 +42,17 @@ func init() {
 			Diameter: U(30),
 			Type:     I(2),
 		}}
+	w.Obstacles.Init(I(10), I(10))
+	w.ObstacleSize = U(30)
+	for y := I(0); y.Lt(w.Obstacles.NCols()); y.Inc() {
+		for x := I(0); x.Lt(w.Obstacles.NCols()); x.Inc() {
+			if y.Plus(x).Mod(I(2)).Eq(I(0)) {
+				w.Obstacles.Set(x, y, I(0))
+			} else {
+				w.Obstacles.Set(x, y, I(1))
+			}
+		}
+	}
 }
 func main5() {
 	originalWorld := w
@@ -129,16 +140,17 @@ func GetNewRecordingFile() string {
 }
 
 type interfacePeer struct {
-	conn net.Conn
+	endpoint string
+	conn     net.Conn
 }
 
-func (p *interfacePeer) getInput() Input {
+func (p *interfacePeer) getInput() PlayerInput {
 	// Keep trying to get an input from a peer.
 	for {
 		// If we don't have a peer, wait until we get one.
 		if p.conn == nil {
 			// Listen for incoming connections
-			listener, err := net.Listen("tcp", "localhost:56901")
+			listener, err := net.Listen("tcp", p.endpoint)
 			Check(err)
 
 			// Accept one incoming connection.
@@ -159,7 +171,7 @@ func (p *interfacePeer) getInput() Input {
 		}
 
 		// Finally, we can return the input.
-		var input Input
+		var input PlayerInput
 		Deserialize(bytes.NewBuffer(data), &input)
 		return input
 	}
@@ -188,11 +200,17 @@ func (p *interfacePeer) sendWorld(w *World) {
 
 func main() {
 	frameIdx := 0
-	peer := interfacePeer{}
+	player1 := interfacePeer{}
+	player1.endpoint = "localhost:56901"
+	//player2 := interfacePeer{}
+	//player2.endpoint = "localhost:56902"
 	for w.Over.Eq(I(0)) {
-		input := peer.getInput()
+		var input Input
+		input.Player1Input = player1.getInput()
+		//input.Player2Input = player2.getInput()
 		w.Step(&input, frameIdx)
-		peer.sendWorld(&w)
+		player1.sendWorld(&w)
+		//player2.sendWorld(&w)
 
 		if input.Player1Input.Quit || input.Player2Input.Quit {
 			break

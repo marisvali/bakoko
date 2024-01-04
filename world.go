@@ -2,6 +2,7 @@ package bakoko
 
 import (
 	"bytes"
+	"io"
 	. "playful-patterns.com/bakoko/ints"
 )
 
@@ -21,11 +22,54 @@ type Player struct {
 	Health   Int
 }
 
+type Matrix struct {
+	cells []Int
+	nRows Int
+	nCols Int
+}
+
+func (m *Matrix) Serialize(w io.Writer) {
+	Serialize(w, m.nRows)
+	Serialize(w, m.nCols)
+	Serialize(w, m.cells)
+}
+
+func (m *Matrix) Deserialize(buf *bytes.Buffer) {
+	Deserialize(buf, &m.nRows)
+	Deserialize(buf, &m.nCols)
+	m.cells = make([]Int, m.nRows.Times(m.nCols).ToInt64())
+	Deserialize(buf, m.cells)
+}
+
+func (m *Matrix) Init(nRows, nCols Int) {
+	m.nRows = nRows
+	m.nCols = nCols
+	m.cells = make([]Int, nRows.Times(nCols).ToInt64())
+}
+
+func (m *Matrix) Set(x, y, val Int) {
+	m.cells[y.Times(m.nCols).Plus(x).ToInt64()] = val
+}
+
+func (m *Matrix) Get(x, y Int) Int {
+	return m.cells[y.Times(m.nCols).Plus(x).ToInt64()]
+}
+
+func (m *Matrix) NRows() Int {
+	return m.nRows
+}
+
+func (m *Matrix) NCols() Int {
+	return m.nCols
+}
+
 type World struct {
-	Player1 Player
-	Player2 Player
-	Balls   []Ball
-	Over    Int
+	Player1      Player
+	Player2      Player
+	Balls        []Ball
+	Over         Int
+	Obstacles    Matrix
+	ObstacleSize Int
 }
 
 type PlayerInput struct {
@@ -49,6 +93,8 @@ func (w *World) Serialize() []byte {
 	Serialize(buf, w.Player2)
 	Serialize(buf, I(int64(len(w.Balls))))
 	Serialize(buf, w.Balls)
+	w.Obstacles.Serialize(buf)
+	Serialize(buf, w.ObstacleSize)
 	return buf.Bytes()
 }
 
@@ -59,6 +105,8 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &lenBalls)
 	w.Balls = make([]Ball, lenBalls.ToInt64())
 	Deserialize(buf, w.Balls)
+	w.Obstacles.Deserialize(buf)
+	Deserialize(buf, &w.ObstacleSize)
 }
 
 func (w *World) SerializeToFile(filename string) {
