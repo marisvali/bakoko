@@ -202,9 +202,9 @@ func DrawPlayer(
 	healthImage *ebiten.Image,
 	player *Player) {
 	// Draw the player sprite.
-	x := WorldToScreenFloat(player.Pos.X)
-	y := WorldToScreenFloat(player.Pos.Y)
-	diam := WorldToScreenFloat(player.Diameter)
+	x := WorldToScreenFloat(player.Bounds.Pos.X)
+	y := WorldToScreenFloat(player.Bounds.Pos.Y)
+	diam := WorldToScreenFloat(player.Bounds.Diameter)
 	DrawCircle(screen, playerImage, x, y, diam)
 
 	// Draw a small sprite for each ball that the player has.
@@ -251,9 +251,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			ballImage = g.ball2
 		}
 		DrawCircle(screen, ballImage,
-			WorldToScreenFloat(ball.Pos.X),
-			WorldToScreenFloat(ball.Pos.Y),
-			WorldToScreenFloat(ball.Diameter))
+			WorldToScreenFloat(ball.Bounds.Pos.X),
+			WorldToScreenFloat(ball.Bounds.Pos.Y),
+			WorldToScreenFloat(ball.Bounds.Diameter))
 	}
 
 	//img1 := ebiten.NewImage(50, 50)

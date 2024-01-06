@@ -6,17 +6,25 @@ import (
 	. "playful-patterns.com/bakoko/ints"
 )
 
+type Line struct {
+	Start Pt
+	End   Pt
+}
+
+type Circle struct {
+	Pos      Pt
+	Diameter Int
+}
+
 type Ball struct {
 	Type           Int
-	Pos            Pt
-	Diameter       Int
+	Bounds         Circle
 	Speed          Pt
 	CanBeCollected bool
 }
 
 type Player struct {
-	Pos      Pt
-	Diameter Int
+	Bounds   Circle
 	NBalls   Int
 	BallType Int
 	Health   Int
@@ -136,14 +144,15 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 		return
 	}
 
-	speed := player.Pos.To(pt)
+	speed := player.Bounds.Pos.To(pt)
 	//speed.SetLen(MU(6000))
 	speed.SetLen(MU(6000))
 
 	ball := Ball{
 		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
-		Pos:            player.Pos,
-		Diameter:       U(30),
+		Bounds: Circle{
+			Pos:      player.Bounds.Pos,
+			Diameter: U(30)},
 		Speed:          speed,
 		CanBeCollected: false,
 		Type:           player.BallType,
@@ -182,7 +191,7 @@ func UpdateBallPositions(balls []Ball) {
 	for idx := range balls {
 		ball := &balls[idx]
 		if ball.Speed.SquaredLen().Gt(I(0)) {
-			ball.Pos.Add(ball.Speed)
+			ball.Bounds.Pos.Add(ball.Speed)
 			ball.Speed.AddLen(MU(-60))
 		}
 		if !ball.CanBeCollected && ball.Speed.SquaredLen().Lt(MU(100)) {
@@ -193,16 +202,16 @@ func UpdateBallPositions(balls []Ball) {
 
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
 	if input.MoveRight {
-		player.Pos.X.Add(U(3))
+		player.Bounds.Pos.X.Add(U(3))
 	}
 	if input.MoveLeft {
-		player.Pos.X.Subtract(U(3))
+		player.Bounds.Pos.X.Subtract(U(3))
 	}
 	if input.MoveUp {
-		player.Pos.Y.Subtract(U(3))
+		player.Bounds.Pos.Y.Subtract(U(3))
 	}
 	if input.MoveDown {
-		player.Pos.Y.Add(U(3))
+		player.Bounds.Pos.Y.Add(U(3))
 	}
 	if input.Shoot {
 		ShootBall(player, balls, input.ShootPt)
@@ -210,9 +219,9 @@ func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
 }
 
 func PlayerAndBallAreTouching(player Player, ball Ball) bool {
-	maxDist := ball.Diameter.Plus(player.Diameter).DivBy(I(2))
+	maxDist := ball.Bounds.Diameter.Plus(player.Bounds.Diameter).DivBy(I(2))
 	squaredMaxDist := maxDist.Sqr()
-	return player.Pos.SquaredDistTo(ball.Pos).Leq(squaredMaxDist)
+	return player.Bounds.Pos.SquaredDistTo(ball.Bounds.Pos).Leq(squaredMaxDist)
 }
 
 func FriendlyBall(player Player, ball Ball) bool {

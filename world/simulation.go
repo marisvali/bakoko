@@ -15,32 +15,37 @@ var w World
 
 func init() {
 	w.Player1 = Player{
-		Pos:      UPt(60, 260),
-		Diameter: U(50),
+		Bounds: Circle{
+			Pos:      UPt(60, 260),
+			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(1),
 		Health:   I(3)}
 	w.Player2 = Player{
-		Pos:      UPt(180, 60),
-		Diameter: U(50),
+		Bounds: Circle{
+			Pos:      UPt(180, 60),
+			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(2),
 		Health:   I(3)}
 	w.Balls = []Ball{
 		{
-			Pos:      UPt(120, 70),
-			Diameter: U(30),
-			Type:     I(1),
+			Bounds: Circle{
+				Pos:      UPt(120, 70),
+				Diameter: U(30)},
+			Type: I(1),
 		},
 		{
-			Pos:      UPt(90, 210),
-			Diameter: U(30),
-			Type:     I(1),
+			Bounds: Circle{
+				Pos:      UPt(90, 210),
+				Diameter: U(30)},
+			Type: I(1),
 		},
 		{
-			Pos:      UPt(190, 140),
-			Diameter: U(30),
-			Type:     I(2),
+			Bounds: Circle{
+				Pos:      UPt(190, 140),
+				Diameter: U(30)},
+			Type: I(2),
 		}}
 	w.Obstacles.Init(I(10), I(10))
 	w.ObstacleSize = U(30)
