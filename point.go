@@ -21,6 +21,10 @@ func (p *Pt) Add(other Pt) {
 	p.Y = p.Y.Plus(other.Y)
 }
 
+func (p Pt) Plus(other Pt) Pt {
+	return Pt{p.X.Plus(other.X), p.Y.Plus(other.Y)}
+}
+
 func (p Pt) Minus(other Pt) Pt {
 	return Pt{p.X.Minus(other.X), p.Y.Minus(other.Y)}
 }
@@ -36,7 +40,8 @@ func (p Pt) DivBy(divide Int) Pt {
 // Reflect p around vec.
 // We don't assume that vec is normalized.
 func (p Pt) Reflected(vec Pt) Pt {
-	//r=d−2(d⋅n)n
+	// r = p − 2(p⋅vec)vec
+	// where p⋅vec is the dot product and vec is normalized
 	l := vec.Len()
 	// Compute dot product but normalize vec at the same time.
 	// This way we don't normalize vec prematurely. We multiply it by p first,
@@ -82,8 +87,9 @@ func (p *Pt) SetLen(newLen Int) {
 func (p *Pt) AddLen(extraLen Int) {
 	oldLen := p.Len()
 	newLen := oldLen.Plus(extraLen)
-	if newLen.Lt(I(0)) {
+	if newLen.Leq(I(0)) {
 		newLen = I(0)
+		return
 	}
 	p.Scale(newLen, oldLen)
 }

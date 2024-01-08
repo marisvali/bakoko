@@ -9,7 +9,8 @@ import (
 type Ball struct {
 	Type           Int
 	Bounds         Circle
-	Speed          Pt
+	MoveDir        Pt
+	Speed          Int
 	CanBeCollected bool
 }
 
@@ -137,15 +138,17 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 		return
 	}
 
-	speed := player.Bounds.Center.To(pt)
-	//speed.SetLen(MU(6000))
-	speed.SetLen(MU(6000))
+	moveDir := player.Bounds.Center.To(pt)
+	//moveDir.SetLen(MU(6000))
+	moveDir.SetLen(U(1))
+	speed := MU(6000)
 
 	ball := Ball{
 		//Center:            Pt{player.Center.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Center.Y},
 		Bounds: Circle{
 			Center:   player.Bounds.Center,
 			Diameter: U(30)},
+		MoveDir:        moveDir,
 		Speed:          speed,
 		CanBeCollected: false,
 		Type:           player.BallType,
@@ -171,25 +174,57 @@ func DeserializeInputs(filename string) []Input {
 	return inputs
 }
 
+// Compute the new position of a circle travelling from its current position
+// along travelVec to a new position. Collisions are handled so that the final
+// position takes into account any obstacles hit along the way.
+// The logic of this function is that the circle travels for a length of
+// travelLen in total and has no concept of time. So you can say it treats
+// the movement as uniform, as if moving with the same speed the whole time.
+func Travel(c Circle, travelVec Pt, travelLen Int, obstacle Square) (newPos Pt, newTravelVec Pt) {
+	oldPos := c.Center
+
+	for {
+		// Given an original position and a travel vector, compute the new
+		// position.
+		newPos = oldPos.Plus(travelVec.Times(travelLen).DivBy(travelVec.Len()))
+
+		// Check if we can travel to newPos without collision.
+		// CircleSquareCollision doesn't return oldPos as a collision point.
+		intersects, circlePositionAtCollision, collisionNormal, _ :=
+			CircleSquareCollision(oldPos, newPos, c.Diameter, obstacle)
+		if !intersects {
+			// No collision, so we're fine, newPos is the final position.
+			return newPos, travelVec
+		}
+
+		// We collided. We were supposed to travel travelLen but we only
+		// travelled part of that then collided.
+		// Find out how much we travelled.
+		travelledLen := oldPos.To(circlePositionAtCollision).Len()
+		// Move to the point where we collided.
+		oldPos = circlePositionAtCollision
+		// Update the travel length.
+		travelLen.Subtract(travelledLen)
+		// Update the travel direction.
+		travelVec = travelVec.Reflected(collisionNormal)
+	}
+}
+
 func UpdateBallPositions(balls []Ball, s Square) {
 	// update the state of each ball (move it, make it collectible)
 	for idx := range balls {
 		ball := &balls[idx]
-		if ball.Speed.SquaredLen().Gt(I(0)) {
-			newPos := ball.Bounds.Center
-			newPos.Add(ball.Speed)
+		if ball.Speed.Gt(I(0)) {
+			// move the ball
+			ball.Bounds.Center, ball.MoveDir = Travel(ball.Bounds, ball.MoveDir, ball.Speed, s)
 
-			intersects, circlePositionAtCollision, collisionNormal, _ :=
-				CircleSquareCollision(ball.Bounds.Center, newPos, ball.Bounds.Diameter, s)
-			if intersects {
-				newPos = circlePositionAtCollision
-				ball.Speed = ball.Speed.Reflected(collisionNormal)
+			// decrease speed by some deceleration
+			ball.Speed.Subtract(MU(60))
+			if ball.Speed.Lt(I(0)) {
+				ball.Speed = I(0)
 			}
-
-			ball.Bounds.Center.Add(ball.Speed)
-			ball.Speed.AddLen(MU(-60))
 		}
-		if !ball.CanBeCollected && ball.Speed.SquaredLen().Lt(MU(100)) {
+		if !ball.CanBeCollected && ball.Speed.Lt(MU(100)) {
 			ball.CanBeCollected = true
 		}
 	}

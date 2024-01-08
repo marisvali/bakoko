@@ -230,6 +230,7 @@ type DebugInfo struct {
 	Circles []Circle
 }
 
+// CircleSquareCollision doesn't return circleOldPos as a collision point.
 func CircleSquareCollision(circleOldPos Pt, circleNewPos Pt,
 	circleDiameter Int, s Square) (intersects bool,
 	circlePositionAtCollision Pt, collisionNormal Pt,
@@ -313,23 +314,22 @@ func CircleSquareCollision(circleOldPos Pt, circleNewPos Pt,
 	debugInfo.Lines = []Line{leftLine, rightLine, upLine, downLine}
 	debugInfo.Circles = circles[:]
 
-	if len(intersectionPoints) == 0 {
-		return false, Pt{}, Pt{}, debugInfo
-	}
-
-	if len(intersectionPoints) == 1 {
-		return true, intersectionPoints[0], intersectionNormals[0], debugInfo
-	}
-
+	// Find the intersection point closest to the start point, but discard those
+	// which are exactly the start point.
 	minDist := I(math.MaxInt64)
-	minIdx := 0
+	minIdx := -1
 	for idx, pt := range intersectionPoints {
 		dist := circleOldPos.SquaredDistTo(pt)
-		if dist.Lt(minDist) {
+		// Get the point which is closest to but not quite the start point.
+		if dist.Gt(I(0)) && dist.Lt(minDist) {
 			minDist = dist
 			minIdx = idx
 		}
 	}
 
-	return true, intersectionPoints[minIdx], intersectionNormals[minIdx], debugInfo
+	if minIdx < 0 {
+		return false, Pt{}, Pt{}, debugInfo
+	} else {
+		return true, intersectionPoints[minIdx], intersectionNormals[minIdx], debugInfo
+	}
 }
