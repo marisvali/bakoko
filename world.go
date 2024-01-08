@@ -6,16 +6,6 @@ import (
 	. "playful-patterns.com/bakoko/ints"
 )
 
-type Line struct {
-	Start Pt
-	End   Pt
-}
-
-type Circle struct {
-	Pos      Pt
-	Diameter Int
-}
-
 type Ball struct {
 	Type           Int
 	Bounds         Circle
@@ -78,6 +68,7 @@ type World struct {
 	Over         Int
 	Obstacles    Matrix
 	ObstacleSize Int
+	Ob1          Square
 }
 
 type PlayerInput struct {
@@ -103,6 +94,7 @@ func (w *World) Serialize() []byte {
 	Serialize(buf, w.Balls)
 	w.Obstacles.Serialize(buf)
 	Serialize(buf, w.ObstacleSize)
+	Serialize(buf, w.Ob1)
 	return buf.Bytes()
 }
 
@@ -115,6 +107,7 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, w.Balls)
 	w.Obstacles.Deserialize(buf)
 	Deserialize(buf, &w.ObstacleSize)
+	Deserialize(buf, &w.Ob1)
 }
 
 func (w *World) SerializeToFile(filename string) {
@@ -144,14 +137,14 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 		return
 	}
 
-	speed := player.Bounds.Pos.To(pt)
+	speed := player.Bounds.Center.To(pt)
 	//speed.SetLen(MU(6000))
 	speed.SetLen(MU(6000))
 
 	ball := Ball{
-		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
+		//Center:            Pt{player.Center.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Center.Y},
 		Bounds: Circle{
-			Pos:      player.Bounds.Pos,
+			Center:   player.Bounds.Center,
 			Diameter: U(30)},
 		Speed:          speed,
 		CanBeCollected: false,
@@ -178,20 +171,22 @@ func DeserializeInputs(filename string) []Input {
 	return inputs
 }
 
-func (w *World) Step(input *Input, frameIdx int) {
-	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input)
-	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input)
-	UpdateBallPositions(w.Balls)
-	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
-	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
-}
-
-func UpdateBallPositions(balls []Ball) {
+func UpdateBallPositions(balls []Ball, s Square) {
 	// update the state of each ball (move it, make it collectible)
 	for idx := range balls {
 		ball := &balls[idx]
 		if ball.Speed.SquaredLen().Gt(I(0)) {
-			ball.Bounds.Pos.Add(ball.Speed)
+			newPos := ball.Bounds.Center
+			newPos.Add(ball.Speed)
+
+			intersects, circlePositionAtCollision, collisionNormal, _ :=
+				CircleSquareCollision(ball.Bounds.Center, newPos, ball.Bounds.Diameter, s)
+			if intersects {
+				newPos = circlePositionAtCollision
+				ball.Speed = ball.Speed.Reflected(collisionNormal)
+			}
+
+			ball.Bounds.Center.Add(ball.Speed)
 			ball.Speed.AddLen(MU(-60))
 		}
 		if !ball.CanBeCollected && ball.Speed.SquaredLen().Lt(MU(100)) {
@@ -202,16 +197,16 @@ func UpdateBallPositions(balls []Ball) {
 
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
 	if input.MoveRight {
-		player.Bounds.Pos.X.Add(U(3))
+		player.Bounds.Center.X.Add(U(3))
 	}
 	if input.MoveLeft {
-		player.Bounds.Pos.X.Subtract(U(3))
+		player.Bounds.Center.X.Subtract(U(3))
 	}
 	if input.MoveUp {
-		player.Bounds.Pos.Y.Subtract(U(3))
+		player.Bounds.Center.Y.Subtract(U(3))
 	}
 	if input.MoveDown {
-		player.Bounds.Pos.Y.Add(U(3))
+		player.Bounds.Center.Y.Add(U(3))
 	}
 	if input.Shoot {
 		ShootBall(player, balls, input.ShootPt)
@@ -219,9 +214,7 @@ func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
 }
 
 func PlayerAndBallAreTouching(player Player, ball Ball) bool {
-	maxDist := ball.Bounds.Diameter.Plus(player.Bounds.Diameter).DivBy(I(2))
-	squaredMaxDist := maxDist.Sqr()
-	return player.Bounds.Pos.SquaredDistTo(ball.Bounds.Pos).Leq(squaredMaxDist)
+	return CirclesIntersect(player.Bounds, ball.Bounds)
 }
 
 func FriendlyBall(player Player, ball Ball) bool {
@@ -256,4 +249,15 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 		}
 	}
 	*balls = newBalls
+}
+
+func (w *World) Step(input *Input, frameIdx int) {
+	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input)
+	if frameIdx == 10 {
+		ShootBall(&w.Player1, &w.Balls, UPt(1000, 700))
+	}
+	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input)
+	UpdateBallPositions(w.Balls, w.Ob1)
+	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
+	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
 }

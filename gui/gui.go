@@ -202,8 +202,8 @@ func DrawPlayer(
 	healthImage *ebiten.Image,
 	player *Player) {
 	// Draw the player sprite.
-	x := WorldToScreenFloat(player.Bounds.Pos.X)
-	y := WorldToScreenFloat(player.Bounds.Pos.Y)
+	x := WorldToScreenFloat(player.Bounds.Center.X)
+	y := WorldToScreenFloat(player.Bounds.Center.Y)
 	diam := WorldToScreenFloat(player.Bounds.Diameter)
 	DrawCircle(screen, playerImage, x, y, diam)
 
@@ -229,16 +229,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorNeutralLight1)
 
 	// Obstacle grid
-	for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
-		for x := I(0); x.Lt(g.w.Obstacles.NCols()); x.Inc() {
-			if g.w.Obstacles.Get(y, x).Eq(I(1)) {
-				xScreen := WorldToScreenFloat(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
-				yScreen := WorldToScreenFloat(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
-				diameter := WorldToScreenFloat(g.w.ObstacleSize)
-				DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
-			}
-		}
-	}
+	//for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
+	//	for x := I(0); x.Lt(g.w.Obstacles.NCols()); x.Inc() {
+	//		if g.w.Obstacles.Get(y, x).Eq(I(1)) {
+	//			xScreen := WorldToScreenFloat(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+	//			yScreen := WorldToScreenFloat(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+	//			diameter := WorldToScreenFloat(g.w.ObstacleSize)
+	//			DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+	//		}
+	//	}
+	//}
+
+	// debug square
+	xScreen := WorldToScreenFloat(g.w.Ob1.Center.X)
+	yScreen := WorldToScreenFloat(g.w.Ob1.Center.Y)
+	diameter := WorldToScreenFloat(g.w.Ob1.Size)
+	DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
 
 	// Players
 	DrawPlayer(screen, g.player1, g.ball1, g.health, &g.w.Player1)
@@ -251,15 +257,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			ballImage = g.ball2
 		}
 		DrawCircle(screen, ballImage,
-			WorldToScreenFloat(ball.Bounds.Pos.X),
-			WorldToScreenFloat(ball.Bounds.Pos.Y),
+			WorldToScreenFloat(ball.Bounds.Center.X),
+			WorldToScreenFloat(ball.Bounds.Center.Y),
 			WorldToScreenFloat(ball.Bounds.Diameter))
 	}
 
 	//img1 := ebiten.NewImage(50, 50)
 	//img1.Fill(colorPrimary)
 	//op := &ebiten.DrawImageOptions{}
-	//op.GeoM.Translate(Real(g.w.Player1.Pos.X), Real(g.w.Player1.Pos.Y))
+	//op.GeoM.Translate(Real(g.w.Player1.Center.X), Real(g.w.Player1.Center.Y))
 	//screen.DrawImage(img1, op)
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("ActualTPS: %f", ebiten.ActualTPS()))

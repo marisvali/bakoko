@@ -3,7 +3,7 @@ package bakoko
 import . "playful-patterns.com/bakoko/ints"
 
 /*
-Unit is used in order to get some advantages of floating points when doing
+Unit is used in order to get some advantages of floating Points when doing
 integer-only calculations.
 
 The problem:
@@ -42,7 +42,8 @@ I don't overflow in my computations. Since I won't know what my computations
 will be until I finish the game, I need this flexibility established from the
 start.
 */
-const Unit = 1000
+//const Unit = 1000
+const Unit = 100
 
 func Units(numUnits Int) Int {
 	return numUnits.Times(I(Unit))

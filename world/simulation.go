@@ -16,14 +16,14 @@ var w World
 func init() {
 	w.Player1 = Player{
 		Bounds: Circle{
-			Pos:      UPt(60, 260),
+			Center:   UPt(60, 260),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(1),
 		Health:   I(3)}
 	w.Player2 = Player{
 		Bounds: Circle{
-			Pos:      UPt(180, 60),
+			Center:   UPt(180, 60),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(2),
@@ -31,19 +31,19 @@ func init() {
 	w.Balls = []Ball{
 		{
 			Bounds: Circle{
-				Pos:      UPt(120, 70),
+				Center:   UPt(120, 70),
 				Diameter: U(30)},
 			Type: I(1),
 		},
 		{
 			Bounds: Circle{
-				Pos:      UPt(90, 210),
+				Center:   UPt(90, 210),
 				Diameter: U(30)},
 			Type: I(1),
 		},
 		{
 			Bounds: Circle{
-				Pos:      UPt(190, 140),
+				Center:   UPt(190, 140),
 				Diameter: U(30)},
 			Type: I(2),
 		}}
@@ -58,6 +58,7 @@ func init() {
 			}
 		}
 	}
+	w.Ob1 = Square{UPt(200, 350), U(100)}
 }
 func main5() {
 	originalWorld := w
@@ -220,6 +221,7 @@ func main() {
 		if input.Player1Input.Quit || input.Player2Input.Quit {
 			break
 		}
+		frameIdx++
 	}
 }
 
