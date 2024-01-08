@@ -21,6 +21,35 @@ func (p *Pt) Add(other Pt) {
 	p.Y = p.Y.Plus(other.Y)
 }
 
+func (p Pt) Minus(other Pt) Pt {
+	return Pt{p.X.Minus(other.X), p.Y.Minus(other.Y)}
+}
+
+func (p Pt) Times(multiply Int) Pt {
+	return Pt{p.X.Times(multiply), p.Y.Times(multiply)}
+}
+
+func (p Pt) DivBy(divide Int) Pt {
+	return Pt{p.X.DivBy(divide), p.Y.DivBy(divide)}
+}
+
+// Reflect p around vec.
+// We don't assume that vec is normalized.
+func (p Pt) Reflected(vec Pt) Pt {
+	//r=d−2(d⋅n)n
+	l := vec.Len()
+	// Compute dot product but normalize vec at the same time.
+	// This way we don't normalize vec prematurely. We multiply it by p first,
+	// before dividing it by l, this way we don't lose precision.
+	dotX := p.X.Times(vec.X).DivBy(l)
+	dotY := p.Y.Times(vec.Y).DivBy(l)
+	dot := dotX.Plus(dotY)
+	// Again, multiply vec by some dot product, and only then divide by the vec
+	// length. This way we normalize vec but we don't lose precision.
+	intermediate := vec.Times(dot.Times(I(2))).DivBy(l)
+	return p.Minus(intermediate)
+}
+
 func (p *Pt) Scale(multiply Int, divide Int) {
 	p.X = p.X.Times(multiply).DivBy(divide)
 	p.Y = p.Y.Times(multiply).DivBy(divide)
@@ -36,6 +65,10 @@ func (p Pt) Len() Int {
 
 func (p Pt) To(other Pt) Pt {
 	return Pt{other.X.Minus(p.X), other.Y.Minus(p.Y)}
+}
+
+func (p Pt) Dot(other Pt) Int {
+	return p.X.Times(other.X).Plus(p.Y.Times(other.Y))
 }
 
 func (p *Pt) SetLen(newLen Int) {
