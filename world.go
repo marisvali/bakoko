@@ -69,7 +69,7 @@ type World struct {
 	Over         Int
 	Obstacles    Matrix
 	ObstacleSize Int
-	Ob1          Square
+	Obs          []Square
 }
 
 type PlayerInput struct {
@@ -95,7 +95,8 @@ func (w *World) Serialize() []byte {
 	Serialize(buf, w.Balls)
 	w.Obstacles.Serialize(buf)
 	Serialize(buf, w.ObstacleSize)
-	Serialize(buf, w.Ob1)
+	Serialize(buf, I(int64(len(w.Obs))))
+	Serialize(buf, w.Obs)
 	return buf.Bytes()
 }
 
@@ -108,7 +109,10 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, w.Balls)
 	w.Obstacles.Deserialize(buf)
 	Deserialize(buf, &w.ObstacleSize)
-	Deserialize(buf, &w.Ob1)
+	var lenObs Int
+	Deserialize(buf, &lenObs)
+	w.Obs = make([]Square, lenObs.ToInt64())
+	Deserialize(buf, w.Obs)
 }
 
 func (w *World) SerializeToFile(filename string) {
@@ -157,6 +161,22 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 	player.NBalls.Dec()
 }
 
+func ShootBallDebug(balls *[]Ball, orig, dest Pt, speed Int) {
+	moveDir := orig.To(dest)
+	moveDir.SetLen(U(1))
+
+	ball := Ball{
+		Bounds: Circle{
+			Center:   orig,
+			Diameter: U(30)},
+		MoveDir:        moveDir,
+		Speed:          speed,
+		CanBeCollected: false,
+		Type:           I(1),
+	}
+	*balls = append(*balls, ball)
+}
+
 func SerializeInputs(inputs []Input, filename string) {
 	buf := new(bytes.Buffer)
 	Serialize(buf, int64(len(inputs)))
@@ -180,7 +200,7 @@ func DeserializeInputs(filename string) []Input {
 // The logic of this function is that the circle travels for a length of
 // travelLen in total and has no concept of time. So you can say it treats
 // the movement as uniform, as if moving with the same speed the whole time.
-func Travel(c Circle, travelVec Pt, travelLen Int, obstacle Square) (newPos Pt, newTravelVec Pt) {
+func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos Pt, newTravelVec Pt) {
 	oldPos := c.Center
 
 	for {
@@ -190,8 +210,8 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacle Square) (newPos Pt, 
 
 		// Check if we can travel to newPos without collision.
 		// CircleSquareCollision doesn't return oldPos as a collision point.
-		intersects, circlePositionAtCollision, collisionNormal, _ :=
-			CircleSquareCollision(oldPos, newPos, c.Diameter, obstacle)
+		intersects, circlePositionAtCollision, collisionNormal :=
+			CircleSquaresCollision(oldPos, newPos, c.Diameter, obstacles)
 		if !intersects {
 			// No collision, so we're fine, newPos is the final position.
 			return newPos, travelVec
@@ -210,7 +230,7 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacle Square) (newPos Pt, 
 	}
 }
 
-func UpdateBallPositions(balls []Ball, s Square) {
+func UpdateBallPositions(balls []Ball, s []Square) {
 	// update the state of each ball (move it, make it collectible)
 	for idx := range balls {
 		ball := &balls[idx]
@@ -289,10 +309,10 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 func (w *World) Step(input *Input, frameIdx int) {
 	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input)
 	if frameIdx == 10 {
-		ShootBall(&w.Player1, &w.Balls, UPt(1000, 700))
+		ShootBallDebug(&w.Balls, UPt(200, 250), UPt(200, 1000), MU(60000))
 	}
 	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input)
-	UpdateBallPositions(w.Balls, w.Ob1)
+	UpdateBallPositions(w.Balls, w.Obs)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
 	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
 }

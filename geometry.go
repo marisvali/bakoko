@@ -333,3 +333,25 @@ func CircleSquareCollision(circleOldPos Pt, circleNewPos Pt,
 		return true, intersectionPoints[minIdx], intersectionNormals[minIdx], debugInfo
 	}
 }
+
+// CircleSquareCollisionMultiple doesn't return circleOldPos as a collision point.
+func CircleSquaresCollision(circleOldPos Pt, circleNewPos Pt,
+	circleDiameter Int, squares []Square) (intersectsAny bool,
+	circlePositionAtCollision Pt, collisionNormal Pt) {
+
+	minDist := I(math.MaxInt64)
+	for _, s := range squares {
+		intersects, pt, normal, _ :=
+			CircleSquareCollision(circleOldPos, circleNewPos, circleDiameter, s)
+
+		dist := circleOldPos.To(pt).Len()
+		if intersects && dist.Lt(minDist) {
+			minDist = dist
+			circlePositionAtCollision = pt
+			collisionNormal = normal
+			intersectsAny = true
+		}
+	}
+
+	return intersectsAny, circlePositionAtCollision, collisionNormal
+}

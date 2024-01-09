@@ -240,11 +240,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//	}
 	//}
 
-	// debug square
-	xScreen := WorldToScreenFloat(g.w.Ob1.Center.X)
-	yScreen := WorldToScreenFloat(g.w.Ob1.Center.Y)
-	diameter := WorldToScreenFloat(g.w.Ob1.Size)
-	DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+	// debug squares
+	for _, sq := range g.w.Obs {
+		xScreen := WorldToScreenFloat(sq.Center.X)
+		yScreen := WorldToScreenFloat(sq.Center.Y)
+		diameter := WorldToScreenFloat(sq.Size)
+		DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+	}
 
 	// Players
 	DrawPlayer(screen, g.player1, g.ball1, g.health, &g.w.Player1)

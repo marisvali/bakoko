@@ -58,7 +58,7 @@ func init() {
 			}
 		}
 	}
-	w.Ob1 = Square{UPt(200, 350), U(100)}
+	w.Obs = []Square{{UPt(200, 350), U(100)}, {UPt(200, 150), U(100)}}
 }
 func main5() {
 	originalWorld := w
