@@ -206,7 +206,7 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacle Square) (newPos Pt, 
 		// Update the travel length.
 		travelLen.Subtract(travelledLen)
 		// Update the travel direction.
-		travelVec = travelVec.Reflected(collisionNormal)
+		travelVec.Reflect(collisionNormal)
 	}
 }
 
