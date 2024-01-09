@@ -20,19 +20,11 @@ type Square struct {
 	Size   Int
 }
 
-func GetMinMax(a, b Int) (Int, Int) {
-	if a.Lt(b) {
-		return a, b
-	} else {
-		return b, a
-	}
-}
-
 func LineVerticalLineIntersection(l, vert Line) (bool, Pt) {
 	// Check if the Lines even intersect.
 
 	// Check if l's min X is at the right of vertX.
-	minX, maxX := GetMinMax(l.Start.X, l.End.X)
+	minX, maxX := MinMax(l.Start.X, l.End.X)
 	vertX := vert.Start.X // we assume vert.Start.X == vert.End.X
 
 	if minX.Gt(vertX) {
@@ -45,8 +37,8 @@ func LineVerticalLineIntersection(l, vert Line) (bool, Pt) {
 	}
 
 	//// Check if l's minY is under the vertMaxY.
-	//minY, maxY := GetMinMax(l.Start.Y, l.End.Y)
-	//vertMinY, vertMaxY := GetMinMax(vert.Start.Y, vert.End.Y)
+	//minY, maxY := MinMax(l.Start.Y, l.End.Y)
+	//vertMinY, vertMaxY := MinMax(vert.Start.Y, vert.End.Y)
 	//
 	//if minY.Gt(vertMaxY) {
 	//	return false, Pt{}
@@ -57,7 +49,7 @@ func LineVerticalLineIntersection(l, vert Line) (bool, Pt) {
 	//	return false, Pt{}
 	//}
 
-	vertMinY, vertMaxY := GetMinMax(vert.Start.Y, vert.End.Y)
+	vertMinY, vertMaxY := MinMax(vert.Start.Y, vert.End.Y)
 
 	// We know the intersection point will have the X coordinate equal to vertX.
 	// We just need to compute the Y coordinate.
@@ -87,7 +79,7 @@ func LineHorizontalLineIntersection(l, horiz Line) (bool, Pt) {
 	// Check if the Lines even intersect.
 
 	// Check if l's minY is under the vertY.
-	minY, maxY := GetMinMax(l.Start.Y, l.End.Y)
+	minY, maxY := MinMax(l.Start.Y, l.End.Y)
 	vertY := horiz.Start.Y // we assume vert.Start.Y == vert.End.Y
 
 	if minY.Gt(vertY) {
@@ -100,8 +92,8 @@ func LineHorizontalLineIntersection(l, horiz Line) (bool, Pt) {
 	}
 
 	//// Check if l's min X is at the right of vertMaxX.
-	//minX, maxX := GetMinMax(l.Start.X, l.End.X)
-	//vertMinX, vertMaxX := GetMinMax(horiz.Start.X, horiz.End.X)
+	//minX, maxX := MinMax(l.Start.X, l.End.X)
+	//vertMinX, vertMaxX := MinMax(horiz.Start.X, horiz.End.X)
 	//
 	//if minX.Gt(vertMaxX) {
 	//	return false, Pt{}
@@ -112,7 +104,7 @@ func LineHorizontalLineIntersection(l, horiz Line) (bool, Pt) {
 	//	return false, Pt{}
 	//}
 
-	vertMinX, vertMaxX := GetMinMax(horiz.Start.X, horiz.End.X)
+	vertMinX, vertMaxX := MinMax(horiz.Start.X, horiz.End.X)
 
 	// We know the intersection point will have the Y coordinate equal to vertY.
 	// We just need to compute the X coordinate.

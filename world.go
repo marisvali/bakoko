@@ -2,6 +2,7 @@ package bakoko
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	. "playful-patterns.com/bakoko/ints"
 )
@@ -200,9 +201,10 @@ func DeserializeInputs(filename string) []Input {
 // The logic of this function is that the circle travels for a length of
 // travelLen in total and has no concept of time. So you can say it treats
 // the movement as uniform, as if moving with the same speed the whole time.
-func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos Pt, newTravelVec Pt) {
+func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos Pt, newTravelVec Pt, stop bool) {
 	oldPos := c.Center
 
+	bounces := 0
 	for {
 		// Given an original position and a travel vector, compute the new
 		// position.
@@ -214,8 +216,12 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos P
 			CircleSquaresCollision(oldPos, newPos, c.Diameter, obstacles)
 		if !intersects {
 			// No collision, so we're fine, newPos is the final position.
-			return newPos, travelVec
+			if bounces > 0 {
+				fmt.Print(bounces, " ")
+			}
+			return newPos, travelVec, false
 		}
+		bounces++
 
 		// We collided. We were supposed to travel travelLen but we only
 		// travelled part of that then collided.
@@ -223,6 +229,16 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos P
 		travelledLen := oldPos.To(circlePositionAtCollision).Len()
 		// Move to the point where we collided.
 		oldPos = circlePositionAtCollision
+		// Move a little away from the collision point. If we ever let the ball
+		// occupy a position where it is colliding with an obstacle, we get in
+		// all sorts of trouble with edge cases. All we want is to move the ball
+		// 1 integer unit away from the obstacle. We know what "away" means
+		// because we have the collision normal.
+		maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
+		offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
+		// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+		oldPos.Add(offset)
+
 		// Update the travel length.
 		travelLen.Subtract(travelledLen)
 		// Update the travel direction.
@@ -236,13 +252,19 @@ func UpdateBallPositions(balls []Ball, s []Square) {
 		ball := &balls[idx]
 		if ball.Speed.Gt(I(0)) {
 			// move the ball
-			ball.Bounds.Center, ball.MoveDir = Travel(ball.Bounds, ball.MoveDir, ball.Speed, s)
+			var stop bool
+			ball.Bounds.Center, ball.MoveDir, stop = Travel(ball.Bounds, ball.MoveDir, ball.Speed, s)
 
-			// decrease speed by some deceleration
-			ball.Speed.Subtract(MU(60))
-			if ball.Speed.Lt(I(0)) {
+			if stop {
 				ball.Speed = I(0)
+			} else {
+				// decrease speed by some deceleration
+				ball.Speed.Subtract(MU(200))
+				if ball.Speed.Lt(I(0)) {
+					ball.Speed = I(0)
+				}
 			}
+
 		}
 		if !ball.CanBeCollected && ball.Speed.Lt(MU(100)) {
 			ball.CanBeCollected = true
@@ -309,7 +331,7 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 func (w *World) Step(input *Input, frameIdx int) {
 	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input)
 	if frameIdx == 10 {
-		ShootBallDebug(&w.Balls, UPt(200, 250), UPt(200, 1000), MU(60000))
+		ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
 	}
 	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input)
 	UpdateBallPositions(w.Balls, w.Obs)

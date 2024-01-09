@@ -279,3 +279,27 @@ func (a Int) Sqrt() Int {
 	}
 	return Int{int64(sqrt(uint64(a.Val)))}
 }
+
+func MinMax(a, b Int) (Int, Int) {
+	if a.Lt(b) {
+		return a, b
+	} else {
+		return b, a
+	}
+}
+
+func Min(a, b Int) Int {
+	if a.Lt(b) {
+		return a
+	} else {
+		return b
+	}
+}
+
+func Max(a, b Int) Int {
+	if a.Lt(b) {
+		return b
+	} else {
+		return a
+	}
+}
