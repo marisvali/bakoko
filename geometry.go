@@ -226,32 +226,9 @@ func LineCircleIntersection4Factors(l Line, circle Circle) (bool, Pt) {
 	}
 }
 
-func LineCircleIntersection3FactorsHelper(start, end Int) (bool, Pt) {
-	// dx = |endX - startX|		// 1-factor number
-	dx := line.End.X.Minus(line.Start.X).Abs()
-	// signx = endX < startX ? 1 : -1
-	signx := I(1)
-	if line.End.X.Gt(line.Start.X) {
-		signx = I(-1)
-	}
-	// kx = b * dx / a			// 3-factor intermediate, then 1-factor
-	// Make kx larger by 1 (in absolute terms) to compensate for the rounding
-	// error.
-	kx := b.Times(dx).DivBy(a.Times(I(2))).EnlargedByOne()
-	// lx = (c * dx / a) * dx	// 3-factor intermediate, then 2-factor
-	lx := c.Times(dx).DivBy(a).Times(dx)
-	// mx = kx^2 - lx			// 2-factor
-	mx := kx.Times(kx).Minus(lx)
-	if mx.IsNegative() {
-		return false, Pt{}
-	}
-	// x1 = startX + signx * (kx + sqrt(mx))	// 2-factor intermediate
-	x1 := line.Start.X.Plus(signx.Times(kx.Plus(mx.Sqrt())))
-	if !x1.Between(line.Start.X, line.End.X) {
-		return false, Pt{}
-	}
-}
-
+// Returns the first point of intersection between 'line' and 'circle', where
+// first means the intersection point closest to line.Start.
+// If line and circle don't intersect, returns false.
 func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	// https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
 	// The idea of the algorithm goes like this:
@@ -262,6 +239,10 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	//		equations above.
 	// - Write the equation of the circle in terms of center and radius.
 	//		(x - center.x)^2 + (y - center.y)^2 = radius^2
+	// 		So a point on the circle must have (x, y) coordinates which obey the
+	//		equations above.
+	// - Intersection points mean those values of x and y for which the 3
+	// equations above are true. We have 3 equations with 3 unknowns: x, y and t.
 	// - So now we can replace the x and y from the circle equation with the
 	// x and y definitions from the line. This way we get a big equation with
 	// only one unknown: t. The t factor will tell us where on the line the
@@ -299,11 +280,14 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 
 	// The issue is, when the line segment intersects the circle, I will have
 	// 0 <= t1, t2 <= 1. I want to do this whole algorithm using integers only.
-	// This means I can't compute t1 and t2 directly. I have to manipulate the
-	// equations so that I multiply things before and do the division at the end.
+	// This means I can't compute t1 and t2 directly, as they are sub-unitary.
+	// I have to manipulate the equations so that I multiply things before and
+	// do the division at the end.
 	// For example if t1 is a fraction of the form p/q I can compute:
-	// x1 = startX + t1 * (endX - startX) = startX + t1 * endX - t1 * startX =
-	// startX + p/q * endX - p/q * startX = startX + p * endX / q - p * startX / q
+	// x1 = startX + t1 * (endX - startX)
+	//	  = startX + t1 * endX - t1 * startX
+	//	  = startX + p/q * endX - p/q * startX
+	//	  = startX + p * endX / q - p * startX / q
 
 	// Another problem is that discriminant involves b*b and a*c. a, b and c
 	// are all two factor numbers. They are the result of multiplying two ints
@@ -327,18 +311,18 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	// the equations, I did them on a piece of paper. The conclusions are:
 	// d = line.End - line.start (direction vector of ray, from start to end)
 	// f = line.Start - circle.Center (vector from center sphere to ray start)
-	// a = (d · d) 				// 2-factor number
-	// b = 2 * f · d			// 2-factor number
-	// c = f · f - r^2			// 2-factor number
-	// kx = b * dx / a			// 3-factor intermediate, then 1-factor
-	// lx = (c * dx / a) * dx	// 3-factor intermediate, then 2-factor
-	// mx = kx^2 - lx			// 2-factor
-	// dx = |endX - startX|		// 1-factor number
-	// signx = endX < startX ? 1 : -1
-	// x1 = startX + signx * (kx + sqrt(mx))	// 2-factor intermediate
+	// a = (d · d) 					// 2-factor number
+	// b = 2 * f · d				// 2-factor number
+	// c = f · f - r^2				// 2-factor number
+	// distX = |endX - startX|		// 1-factor number
+	// kx = b * distX / a			// 3-factor intermediate, then 1-factor
+	// lx = (c * distX / a) * distX	// 3-factor intermediate, then 2-factor
+	// mx = kx^2 - lx				// 2-factor
+	// signX = endX < startX ? 1 : -1
+	// x1 = startX + signX * (kx + sqrt(mx))	// 2-factor intermediate
 	//											// then 1-factor
 	// This way no calculation goes above 3-factor or below 1-factor (sub-unitary).
-	// Same equations for y1, just replace all x coords with y.
+	// Same equations apply for y1, just replace all x coords with y.
 
 	// We have one more thing to deal with. We have a sqrt, which means we need
 	// to check if the input to the sqrt is negative or not (which translates
@@ -382,33 +366,48 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	c := f.Dot(f).Minus(r.Times(r)) // two factors
 
 	// ----- X coordinate -----
-
-	// ----- Y coordinate -----
-	// dx = |endX - startX|		// 1-factor number
-	dy := line.End.Y.Minus(line.Start.Y).Abs()
-	// signx = endX < startX ? 1 : -1
-	signy := I(1)
-	if line.End.X.Gt(line.Start.X) {
-		signy = I(-1)
-	}
-	// kx = b * dx / a			// 3-factor intermediate, then 1-factor
-	// Make kx larger by 1 (in absolute terms) to compensate for the rounding
-	// error.
-	ky := b.Times(dy).DivBy(a.Times(I(2))).EnlargedByOne()
-	// lx = (c * dx / a) * dx	// 3-factor intermediate, then 2-factor
-	ly := c.Times(dy).DivBy(a).Times(dy)
-	// mx = kx^2 - lx			// 2-factor
-	my := ky.Times(ky).Minus(ly)
-	if my.IsNegative() {
+	validX, x1 := lineCircleIntersection3FactorsHelper(a, b, c, line.Start.X, line.End.X)
+	if !validX {
 		return false, Pt{}
 	}
-	// y1 = startY + signy * (ky + sqrt(my))	// 2-factor intermediate
-	y1 := line.Start.Y.Plus(signy.Times(ky.Plus(my.Sqrt())))
-	if !y1.Between(line.Start.Y, line.End.Y) {
+
+	// ----- Y coordinate -----
+	validY, y1 := lineCircleIntersection3FactorsHelper(a, b, c, line.Start.Y, line.End.Y)
+	if !validY {
 		return false, Pt{}
 	}
 
 	return true, Pt{x1, y1}
+}
+
+// Function to reduce the code in LineCircleIntersection3Factors as the same
+// kind of calculations need to be done for coordinates X and Y.
+// Read LineCircleIntersection3Factors to understand what's this does.
+func lineCircleIntersection3FactorsHelper(a, b, c, start, end Int) (bool, Int) {
+	// dist = |end - start|		// 1-factor number
+	dist := end.Minus(start).Abs()
+	// sign = end < start ? 1 : -1
+	sign := I(1)
+	if end.Gt(start) {
+		sign = I(-1)
+	}
+	// k = b * dist / a			// 3-factor intermediate, then 1-factor
+	// Make k larger by 1 (in absolute terms) to compensate for the rounding
+	// error.
+	k := b.Times(dist).DivBy(a.Times(I(2))).EnlargedByOne()
+	// l = (c * dist / a) * dist	// 3-factor intermediate, then 2-factor
+	l := c.Times(dist).DivBy(a).Times(dist)
+	// mx = k^2 - l				// 2-factor
+	m := k.Times(k).Minus(l)
+	if m.IsNegative() {
+		return false, I(0)
+	}
+	// coord = start + sign * (k + sqrt(m))	// 2-factor intermediate
+	coord := start.Plus(sign.Times(k.Plus(m.Sqrt())))
+	if !coord.Between(start, end) {
+		return false, I(0)
+	}
+	return true, coord
 }
 
 func CirclesIntersect(c1, c2 Circle) bool {
