@@ -130,7 +130,7 @@ func LineHorizontalLineIntersection(l, horiz Line) (bool, Pt) {
 	}
 }
 
-func LineCircleIntersection4Multiplications(l Line, circle Circle) (bool, Pt) {
+func LineCircleIntersection4Factors(l Line, circle Circle) (bool, Pt) {
 	//d = L - E ( Direction vector of ray, from start to end )
 	//f = E - C ( Vector from center sphere to ray start )
 
@@ -226,110 +226,189 @@ func LineCircleIntersection4Multiplications(l Line, circle Circle) (bool, Pt) {
 	}
 }
 
-func LineCircleIntersection3Multiplications(l Line, circle Circle) (bool, Pt) {
-	//d = L - E ( Direction vector of ray, from start to end )
-	//f = E - C ( Vector from center sphere to ray start )
-
-	r := circle.Diameter.DivBy(I(2)).Plus(circle.Diameter.Mod(I(2)))
-	d := l.Start.To(l.End)
-	f := circle.Center.To(l.Start)
-
-	a := d.Dot(d)                   // two multiplications
-	b := f.Dot(d).Times(I(2))       // two multiplications
-	c := f.Dot(f).Minus(r.Times(r)) // two multiplications
-
-	xMin, xMax := MinMax(l.Start.X, l.End.X)
-	yMin, yMax := MinMax(l.Start.Y, l.End.Y)
-	//k := b * dx / a
-	//l := c * dx / a
-	//x = l.Start.X - k - dxSign * sqrt(k^2 - dx * l)
-
-	//k := b * dy / a
-	//l := c * dy / a
-	//y = l.Start.Y - k - dxSign * sqrt(k^2 - dy * l)
-
-	// Compute dxSign, is it -1 or 1? dx must always be positive.
-	dx := l.End.X.Minus(l.Start.X)
-	dxSign := I(1)
-	if dx.Lt(I(0)) {
-		dx = dx.Abs()
-		dxSign = I(-1)
+func LineCircleIntersection3FactorsHelper(start, end Int) (bool, Pt) {
+	// dx = |endX - startX|		// 1-factor number
+	dx := line.End.X.Minus(line.Start.X).Abs()
+	// signx = endX < startX ? 1 : -1
+	signx := I(1)
+	if line.End.X.Gt(line.Start.X) {
+		signx = I(-1)
 	}
-
-	k := b.Times(dx).DivBy(a.Times(I(2)))
-	// Make k larger by 1 (in absolute terms) to compensate for the rounding
+	// kx = b * dx / a			// 3-factor intermediate, then 1-factor
+	// Make kx larger by 1 (in absolute terms) to compensate for the rounding
 	// error.
-	if k.Geq(I(0)) {
-		k.Inc()
-	} else {
-		k.Dec()
+	kx := b.Times(dx).DivBy(a.Times(I(2))).EnlargedByOne()
+	// lx = (c * dx / a) * dx	// 3-factor intermediate, then 2-factor
+	lx := c.Times(dx).DivBy(a).Times(dx)
+	// mx = kx^2 - lx			// 2-factor
+	mx := kx.Times(kx).Minus(lx)
+	if mx.IsNegative() {
+		return false, Pt{}
+	}
+	// x1 = startX + signx * (kx + sqrt(mx))	// 2-factor intermediate
+	x1 := line.Start.X.Plus(signx.Times(kx.Plus(mx.Sqrt())))
+	if !x1.Between(line.Start.X, line.End.X) {
+		return false, Pt{}
+	}
+}
+
+func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
+	// https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
+	// The idea of the algorithm goes like this:
+	// - Write the equation of the line in terms of two points on the line.
+	// 		x = startX + t * (endX - startX)
+	// 		y = startY + t * (endY - endY)
+	// 		So a point on the line must have (x, y) coordinates which obey the
+	//		equations above.
+	// - Write the equation of the circle in terms of center and radius.
+	//		(x - center.x)^2 + (y - center.y)^2 = radius^2
+	// - So now we can replace the x and y from the circle equation with the
+	// x and y definitions from the line. This way we get a big equation with
+	// only one unknown: t. The t factor will tell us where on the line the
+	// point of intersection is.
+	// - The equation we need to solve is quadratic (a*t^2 + b*t + c = 0).
+	// This means we have 3 solutions for the equation:
+	// 		- no solution (corresponding to 'line and circle don't intersect')
+	//		- a single solution, t (corresponding to 'line and circle touch')
+	//		- two solutions, t1 and t2 (corresponding to 'line goes through circle')
+	// - After I get values for t, I can compute the points on the line. These
+	// points may or may not fall between (x1, y1) and (x2, y2) on the infinite line.
+	// If 0 <= t <= 1 then it falls between these two points on the infinite line.
+
+	// There are some intermediate steps between the original equations and the
+	// final form that we need to compute. These won't be covered here.
+	// Below are the canonical final formulas:
+	// d = line.End - line.start (direction vector of ray, from start to end)
+	// f = line.Start - circle.Center (vector from center sphere to ray start)
+	// t^2 * ( d · d ) + 2*t*( f · d ) + ( f · f - r^2 ) = 0
+	// where f · d is the dot product between the f and d vectors.
+	// The solution to this quadratic equation:
+	// a = (d · d)
+	// b = 2 * f · d
+	// c = f · f - r^2
+	// discriminant = b*b - 4*a*c
+	// t1 = (-b - sqrt(discriminant)) / (2*a)
+	// t2 = (-b + sqrt(discriminant)) / (2*a)
+	// If discriminant < 0 then we have no solution.
+	// If discriminant == 0 then we have one solution (t1 == t2).
+	// Final intersection points:
+	// x1 = startX + t1 * (endX - startX)
+	// y1 = startY + t1 * (endY - endY)
+	// x2 = startX + t2 * (endX - startX)
+	// y2 = startY + t2 * (endY - endY)
+
+	// The issue is, when the line segment intersects the circle, I will have
+	// 0 <= t1, t2 <= 1. I want to do this whole algorithm using integers only.
+	// This means I can't compute t1 and t2 directly. I have to manipulate the
+	// equations so that I multiply things before and do the division at the end.
+	// For example if t1 is a fraction of the form p/q I can compute:
+	// x1 = startX + t1 * (endX - startX) = startX + t1 * endX - t1 * startX =
+	// startX + p/q * endX - p/q * startX = startX + p * endX / q - p * startX / q
+
+	// Another problem is that discriminant involves b*b and a*c. a, b and c
+	// are all two factor numbers. They are the result of multiplying two ints
+	// which are in the range of coordinates I use in my world.
+	// The discriminant then becomes a four factor number. I know that my int64
+	// limit is 10^18. My world coordinates must be at least between 0 and 1920
+	// because I have a resolution of 1920x1080. I let's say at least 0 to
+	// 10.000, or 10^4. If I multiply 4 numbers that have a maximum of 10^4
+	// I get 10^16. And I want to have a unit, to have some precision. I wanted
+	// 1000 initially, but that might be too much. But to have 4-factor numbers
+	// my unit can't even be 10, because that would multiply my result by 10^4
+	// and I would get 10^20. But if I have only 3-factor numbers, suddenly my
+	// options improve. Without unit I have 10^12. I can afford a unit of 100,
+	// because that multiplies my 10^12 by (10^2)^3 = 10^6, so 10^18.
+	// So I have to somehow arrange my equations so that I only ever rise up to
+	// 3-factor numbers and never above. I can do this by moving things around
+	// so that if I ever have to multiply 4 numbers and divide by another number
+	// I multiply 3 of them, divide, then multiply the result with the 4th number.
+
+	// Again, it's not worth noting here all the moving around that I did for
+	// the equations, I did them on a piece of paper. The conclusions are:
+	// d = line.End - line.start (direction vector of ray, from start to end)
+	// f = line.Start - circle.Center (vector from center sphere to ray start)
+	// a = (d · d) 				// 2-factor number
+	// b = 2 * f · d			// 2-factor number
+	// c = f · f - r^2			// 2-factor number
+	// kx = b * dx / a			// 3-factor intermediate, then 1-factor
+	// lx = (c * dx / a) * dx	// 3-factor intermediate, then 2-factor
+	// mx = kx^2 - lx			// 2-factor
+	// dx = |endX - startX|		// 1-factor number
+	// signx = endX < startX ? 1 : -1
+	// x1 = startX + signx * (kx + sqrt(mx))	// 2-factor intermediate
+	//											// then 1-factor
+	// This way no calculation goes above 3-factor or below 1-factor (sub-unitary).
+	// Same equations for y1, just replace all x coords with y.
+
+	// We have one more thing to deal with. We have a sqrt, which means we need
+	// to check if the input to the sqrt is negative or not (which translates
+	// to 'we have intersection points' or 'we don't').
+
+	// Another thing we need to watch out for is that we lose precision when
+	// computing kx and lx, because they each include a divide operation. This
+	// means kx ad lx get rounded down to the nearest integer. This can actually
+	// cause a problem. For example, a test gave me the values:
+	// kx = -26.9285263 = -26
+	// lx = 710.806481 = 710
+	// The integer values gave me
+	// mx = 676 - 710 => mx < 0 => no intersection
+	// But if I used the floating point values I would get
+	// mx = 725.14552868979169 - 710.806481 => mx > 0 => intersection
+	// So the loss of precision will tell me that sometimes there is no
+	// intersection when there actually is. True, it's a case where the two
+	// 'almost don't intersect'. The issue is that I use this intersection
+	// algorithm to do collision detection. If I get a false negative in
+	// collision detection I will have an object go through another object when
+	// it shouldn't and it will ruin the game. But if something collides when
+	// it could have almost not collided, that's perfectly fine.
+	// So I'd much rather have false positives and zero false negatives.
+	// A solution to this is simply to increase kx's magnitude by 1 in order to
+	// compensate for the precision lost during the integer division. This will
+	// make mx > 0 sometimes when it shouldn't be, but I will never have
+	// mx < 0 when it shouldn't be.
+
+	// r = d/2 -> if we get .5 round up instead of down so that the circle is
+	// slightly bigger. This way we get false positives but no false negatives.
+	r := circle.Diameter.DivBy(I(2)).Plus(circle.Diameter.Mod(I(2)))
+	// d = line.End - line.start (direction vector of ray, from start to end)
+	d := line.Start.To(line.End)
+	// f = line.Start - circle.Center (vector from center sphere to ray start)
+	f := circle.Center.To(line.Start)
+	// a = (d · d) 				// 2-factor number
+	a := d.Dot(d)
+	// b = 2 * f · d			// 2-factor number
+	b := f.Dot(d).Times(I(2)) // two factors
+	// c = f · f - r^2			// 2-factor number
+	c := f.Dot(f).Minus(r.Times(r)) // two factors
+
+	// ----- X coordinate -----
+
+	// ----- Y coordinate -----
+	// dx = |endX - startX|		// 1-factor number
+	dy := line.End.Y.Minus(line.Start.Y).Abs()
+	// signx = endX < startX ? 1 : -1
+	signy := I(1)
+	if line.End.X.Gt(line.Start.X) {
+		signy = I(-1)
+	}
+	// kx = b * dx / a			// 3-factor intermediate, then 1-factor
+	// Make kx larger by 1 (in absolute terms) to compensate for the rounding
+	// error.
+	ky := b.Times(dy).DivBy(a.Times(I(2))).EnlargedByOne()
+	// lx = (c * dx / a) * dx	// 3-factor intermediate, then 2-factor
+	ly := c.Times(dy).DivBy(a).Times(dy)
+	// mx = kx^2 - lx			// 2-factor
+	my := ky.Times(ky).Minus(ly)
+	if my.IsNegative() {
+		return false, Pt{}
+	}
+	// y1 = startY + signy * (ky + sqrt(my))	// 2-factor intermediate
+	y1 := line.Start.Y.Plus(signy.Times(ky.Plus(my.Sqrt())))
+	if !y1.Between(line.Start.Y, line.End.Y) {
+		return false, Pt{}
 	}
 
-	ll := c.Times(dx).DivBy(a)
-	thing1 := k.Times(k).Minus(dx.Times(ll))
-	if thing1.Geq(I(0)) {
-		x := l.Start.X.Minus(dxSign.Times(k)).Minus(dxSign.Times(thing1.Sqrt()))
-
-		// Compute dySign, is it -1 or 1? dy must always be positive.
-		dy := l.End.Y.Minus(l.Start.Y)
-		dySign := I(1)
-		if dy.Lt(I(0)) {
-			dy = dy.Negative()
-			dySign = I(-1)
-		}
-
-		// We lose precision at this DivBy.
-		// For example if the actual value would be k = -26.9285263 then this
-		// would result in k = -26. This is enough of a problem to cause the
-		// intersection algorithm to say there is no intersection sometimes
-		// when there is. This is very damaging to my collision algorithm
-		// because it means sometimes I would get tunneling effects. I want to
-		// err on the side of caution. Better to say it intersects when it
-		// doesn't, if it 'almost' intersects, than to say it doesn't when it
-		// does.
-		k = b.Times(dy).DivBy(a.Times(I(2)))
-		// Make k larger by 1 (in absolute terms) to compensate for the rounding
-		// error.
-		if k.Geq(I(0)) {
-			k.Inc()
-		} else {
-			k.Dec()
-		}
-		ll = c.Times(dy).DivBy(a)
-		thing2 := k.Times(k).Minus(dy.Times(ll))
-		if thing2.Geq(I(0)) {
-			y := l.Start.Y.Minus(dySign.Times(k)).Minus(dySign.Times(thing2.Sqrt()))
-
-			if x.Geq(xMin) && x.Leq(xMax) && y.Geq(yMin) && y.Leq(yMax) {
-				return true, Pt{x, y}
-			}
-		}
-	}
-	//
-	//dxSign = dxSign.Negative()
-	//thing1 = k.Times(k).Minus(dx.Times(ll))
-	//if thing1.Geq(I(0)) {
-	//	x := l.Start.X.Minus(k).Minus(dxSign.Times(thing1.Sqrt()))
-	//
-	//	// Compute dySign, is it -1 or 1? dy must always be positive.
-	//	dy := l.End.Y.Minus(l.Start.Y)
-	//	dySign := I(1)
-	//	if dy.Lt(I(0)) {
-	//		dy = dy.Negative()
-	//		dySign = I(-1)
-	//	}
-	//	dySign = dySign.Negative()
-	//
-	//	thing2 := k.Times(k).Minus(dy.Times(ll))
-	//	if thing2.Geq(I(0)) {
-	//		y := l.Start.Y.Minus(k).Minus(dySign.Times(thing2.Sqrt()))
-	//		if x.Geq(xMin) && x.Leq(xMax) && y.Geq(yMin) && y.Leq(yMax) {
-	//			return true, Pt{x, y}
-	//		}
-	//	}
-	//}
-
-	return false, Pt{}
+	return true, Pt{x1, y1}
 }
 
 func CirclesIntersect(c1, c2 Circle) bool {
@@ -421,7 +500,7 @@ func CircleSquareCollision(circleOldPos Pt, circleNewPos Pt,
 	//}
 
 	for _, c := range circles {
-		if intersects, pt := LineCircleIntersection3Multiplications(travelLine, c); intersects {
+		if intersects, pt := LineCircleIntersection3Factors(travelLine, c); intersects {
 			intersectionPoints = append(intersectionPoints, pt)
 			intersectionNormals = append(intersectionNormals, c.Center.To(pt))
 		}

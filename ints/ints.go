@@ -141,6 +141,27 @@ func (a Int) Geq(b Int) bool {
 	return a.Val >= b.Val
 }
 
+func (a Int) IsPositive() bool {
+	return a.Val > 0
+}
+
+func (a Int) IsNegative() bool {
+	return a.Val < 0
+}
+
+func (a Int) IsNonNegative() bool {
+	return a.Val >= 0
+}
+
+func (a Int) IsNonPositive() bool {
+	return a.Val <= 0
+}
+
+func (a Int) Between(val1, val2 Int) bool {
+	valMin, valMax := MinMax(val1, val2)
+	return a.Geq(valMin) && a.Leq(valMax)
+}
+
 func (a *Int) Inc() {
 	if a.Val == math.MaxInt64 {
 		panic(fmt.Errorf("increment overflow: %d", a))
@@ -153,6 +174,24 @@ func (a *Int) Dec() {
 		panic(fmt.Errorf("decrement overflow: %d", a))
 	}
 	a.Val--
+}
+
+// Inc() when a > 0, Dec() when a < 0
+func (a *Int) EnlargeByOne() {
+	if a.Val >= 0 {
+		a.Inc()
+	} else {
+		a.Dec()
+	}
+}
+
+func (a Int) EnlargedByOne() Int {
+	if a.Val >= 0 {
+		a.Inc()
+	} else {
+		a.Dec()
+	}
+	return a
 }
 
 func (a Int) Abs() Int {
