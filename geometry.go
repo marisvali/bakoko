@@ -130,8 +130,7 @@ func LineHorizontalLineIntersection(l, horiz Line) (bool, Pt) {
 	}
 }
 
-// (ΔABC) = (1/2) |x1(y2 − y3) + x2(y3 − y1) + x3(y1 − y2)|
-func LineCircleIntersection(l Line, circle Circle) (bool, Pt) {
+func LineCircleIntersection4Multiplications(l Line, circle Circle) (bool, Pt) {
 	//d = L - E ( Direction vector of ray, from start to end )
 	//f = E - C ( Vector from center sphere to ray start )
 
@@ -139,10 +138,27 @@ func LineCircleIntersection(l Line, circle Circle) (bool, Pt) {
 	d := l.Start.To(l.End)
 	f := circle.Center.To(l.Start)
 
-	a := d.Dot(d)
-	b := f.Dot(d).Times(I(2))
-	c := f.Dot(f).Minus(r.Times(r))
+	a := d.Dot(d)                   // two multiplications
+	b := f.Dot(d).Times(I(2))       // two multiplications
+	c := f.Dot(f).Minus(r.Times(r)) // two multiplications
 
+	// The computation below involves 4 multiplications. Which means for a unit
+	// of 1000, if we have a range of coordinates between 1 and 10.000 we have
+	// (10.000*1000)^4 = (10^4*10^3)^4 = 10^28
+	// 2^63 = 9,223,372,036,854,775,808 ~= 10^18
+	// 8,000,000,000,000,000 (2000 * 100)^3
+	// 1,000,000,000,000,000,000 (10000 * 100)^3
+	// 9,223,372,036,854,775,808
+	// With 10.000.000 (unit of 1000) we get only two multiplications within int64.
+	// With 1.000.000 (unit of 100) I would get three multiplications within int64.
+	// But I would still need 4 multiplications for this calculation here.
+	// Should I reduce my unit or adjust this computation?
+	// I know I start from the space of 1 to 10k units and I know I end up there.
+	// The only problem I will ever have is with intermediary calculations that
+	// need to go above to another space.
+	// By my math notes, I can probably go down to 3 multiplications.
+	// I definitely need to modify the unit from 1000 to 100 so that I can have
+	// 3 multiplications.
 	discriminant := b.Times(b).Minus(a.Times(c).Times(I(4)))
 	if discriminant.Lt(I(0)) {
 		// no intersection
@@ -208,6 +224,112 @@ func LineCircleIntersection(l Line, circle Circle) (bool, Pt) {
 		// no intn: FallShort, Past, CompletelyInside
 		return false, Pt{}
 	}
+}
+
+func LineCircleIntersection3Multiplications(l Line, circle Circle) (bool, Pt) {
+	//d = L - E ( Direction vector of ray, from start to end )
+	//f = E - C ( Vector from center sphere to ray start )
+
+	r := circle.Diameter.DivBy(I(2)).Plus(circle.Diameter.Mod(I(2)))
+	d := l.Start.To(l.End)
+	f := circle.Center.To(l.Start)
+
+	a := d.Dot(d)                   // two multiplications
+	b := f.Dot(d).Times(I(2))       // two multiplications
+	c := f.Dot(f).Minus(r.Times(r)) // two multiplications
+
+	xMin, xMax := MinMax(l.Start.X, l.End.X)
+	yMin, yMax := MinMax(l.Start.Y, l.End.Y)
+	//k := b * dx / a
+	//l := c * dx / a
+	//x = l.Start.X - k - dxSign * sqrt(k^2 - dx * l)
+
+	//k := b * dy / a
+	//l := c * dy / a
+	//y = l.Start.Y - k - dxSign * sqrt(k^2 - dy * l)
+
+	// Compute dxSign, is it -1 or 1? dx must always be positive.
+	dx := l.End.X.Minus(l.Start.X)
+	dxSign := I(1)
+	if dx.Lt(I(0)) {
+		dx = dx.Abs()
+		dxSign = I(-1)
+	}
+
+	k := b.Times(dx).DivBy(a.Times(I(2)))
+	// Make k larger by 1 (in absolute terms) to compensate for the rounding
+	// error.
+	if k.Geq(I(0)) {
+		k.Inc()
+	} else {
+		k.Dec()
+	}
+
+	ll := c.Times(dx).DivBy(a)
+	thing1 := k.Times(k).Minus(dx.Times(ll))
+	if thing1.Geq(I(0)) {
+		x := l.Start.X.Minus(dxSign.Times(k)).Minus(dxSign.Times(thing1.Sqrt()))
+
+		// Compute dySign, is it -1 or 1? dy must always be positive.
+		dy := l.End.Y.Minus(l.Start.Y)
+		dySign := I(1)
+		if dy.Lt(I(0)) {
+			dy = dy.Negative()
+			dySign = I(-1)
+		}
+
+		// We lose precision at this DivBy.
+		// For example if the actual value would be k = -26.9285263 then this
+		// would result in k = -26. This is enough of a problem to cause the
+		// intersection algorithm to say there is no intersection sometimes
+		// when there is. This is very damaging to my collision algorithm
+		// because it means sometimes I would get tunneling effects. I want to
+		// err on the side of caution. Better to say it intersects when it
+		// doesn't, if it 'almost' intersects, than to say it doesn't when it
+		// does.
+		k = b.Times(dy).DivBy(a.Times(I(2)))
+		// Make k larger by 1 (in absolute terms) to compensate for the rounding
+		// error.
+		if k.Geq(I(0)) {
+			k.Inc()
+		} else {
+			k.Dec()
+		}
+		ll = c.Times(dy).DivBy(a)
+		thing2 := k.Times(k).Minus(dy.Times(ll))
+		if thing2.Geq(I(0)) {
+			y := l.Start.Y.Minus(dySign.Times(k)).Minus(dySign.Times(thing2.Sqrt()))
+
+			if x.Geq(xMin) && x.Leq(xMax) && y.Geq(yMin) && y.Leq(yMax) {
+				return true, Pt{x, y}
+			}
+		}
+	}
+	//
+	//dxSign = dxSign.Negative()
+	//thing1 = k.Times(k).Minus(dx.Times(ll))
+	//if thing1.Geq(I(0)) {
+	//	x := l.Start.X.Minus(k).Minus(dxSign.Times(thing1.Sqrt()))
+	//
+	//	// Compute dySign, is it -1 or 1? dy must always be positive.
+	//	dy := l.End.Y.Minus(l.Start.Y)
+	//	dySign := I(1)
+	//	if dy.Lt(I(0)) {
+	//		dy = dy.Negative()
+	//		dySign = I(-1)
+	//	}
+	//	dySign = dySign.Negative()
+	//
+	//	thing2 := k.Times(k).Minus(dy.Times(ll))
+	//	if thing2.Geq(I(0)) {
+	//		y := l.Start.Y.Minus(k).Minus(dySign.Times(thing2.Sqrt()))
+	//		if x.Geq(xMin) && x.Leq(xMax) && y.Geq(yMin) && y.Leq(yMax) {
+	//			return true, Pt{x, y}
+	//		}
+	//	}
+	//}
+
+	return false, Pt{}
 }
 
 func CirclesIntersect(c1, c2 Circle) bool {
@@ -294,9 +416,12 @@ func CircleSquareCollision(circleOldPos Pt, circleNewPos Pt,
 		{upperRightCorner, circleDiameter},
 		{lowerRightCorner, circleDiameter},
 	}
+	//circles := [1]Circle{
+	//	{upperLeftCorner, circleDiameter},
+	//}
 
 	for _, c := range circles {
-		if intersects, pt := LineCircleIntersection(travelLine, c); intersects {
+		if intersects, pt := LineCircleIntersection3Multiplications(travelLine, c); intersects {
 			intersectionPoints = append(intersectionPoints, pt)
 			intersectionNormals = append(intersectionNormals, c.Center.To(pt))
 		}

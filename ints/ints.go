@@ -163,6 +163,10 @@ func (a Int) Abs() Int {
 	}
 }
 
+func (a Int) Negative() Int {
+	return Int{-a.Val}
+}
+
 func (a Int) Plus(b Int) Int {
 	c := Int{a.Val + b.Val}
 	if (c.Val > a.Val) == (b.Val > 0) {

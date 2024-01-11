@@ -42,8 +42,9 @@ I don't overflow in my computations. Since I won't know what my computations
 will be until I finish the game, I need this flexibility established from the
 start.
 */
-//const Unit = 1000
-const Unit = 100
+const Unit = 1000
+
+//const Unit = 100
 
 func Units(numUnits Int) Int {
 	return numUnits.Times(I(Unit))

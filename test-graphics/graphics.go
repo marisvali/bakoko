@@ -238,6 +238,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//	DrawPixel2(screen, pt, colorSecondary)
 	//}
 
+	// Debug line-circle intersection.
 	//l := Line{IPt(130, 60), IPt(500, 500)}
 	//c := Circle{IPt(200, 200), I(150)}
 	//DrawLine(screen, l, colorPrimary)
@@ -249,6 +250,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//	DrawPixel2(screen, pt, colorSecondary)
 	//}
 
+	// Debug circle-square intersection.
 	c := g.c
 	s := g.s
 
