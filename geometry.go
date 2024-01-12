@@ -356,6 +356,10 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	r := circle.Diameter.DivBy(I(2)).Plus(circle.Diameter.Mod(I(2)))
 	// d = line.End - line.start (direction vector of ray, from start to end)
 	d := line.Start.To(line.End)
+	if d.X.Eq(I(0)) && d.Y.Eq(I(0)) {
+		// no collision since there is no travel
+		return false, Pt{}
+	}
 	// f = line.Start - circle.Center (vector from center sphere to ray start)
 	f := circle.Center.To(line.Start)
 	// a = (d · d) 				// 2-factor number
