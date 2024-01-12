@@ -56,7 +56,7 @@ func (g *Game) Update() error {
 	//playerInput.MoveUp = slices.Contains(pressedKeys, ebiten.KeyW)
 	//playerInput.MoveDown = slices.Contains(pressedKeys, ebiten.KeyS)
 	//playerInput.MoveRight = slices.Contains(pressedKeys, ebiten.KeyD)
-	step := I(1)
+	step := U(1)
 	if slices.Contains(pressedKeys, ebiten.KeyA) {
 		g.c.Center.X.Subtract(step)
 	}
@@ -95,7 +95,7 @@ func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
 }
 
 func DrawPixel(screen *ebiten.Image, x, y int, color color.Color) {
-	size := 2
+	size := 0
 	for ax := x - size; ax <= x+size; ax++ {
 		for ay := y - size; ay <= y+size; ay++ {
 			screen.Set(ax, ay, color)
@@ -104,9 +104,9 @@ func DrawPixel(screen *ebiten.Image, x, y int, color color.Color) {
 }
 
 func DrawPixel2(screen *ebiten.Image, pt Pt, color color.Color) {
-	x := int(pt.X.ToInt64())
-	y := int(pt.Y.ToInt64())
-	size := 2
+	x := int(WorldToScreen(pt.X))
+	y := int(WorldToScreen(pt.Y))
+	size := 0
 	for ax := x - size; ax <= x+size; ax++ {
 		for ay := y - size; ay <= y+size; ay++ {
 			screen.Set(ax, ay, color)
@@ -136,10 +136,10 @@ func DrawLine2(screen *ebiten.Image, x1, y1, x2, y2 float64, color color.Color) 
 }
 
 func DrawLine(screen *ebiten.Image, l Line, color color.Color) {
-	x1 := l.Start.X.ToFloat64()
-	y1 := l.Start.Y.ToFloat64()
-	x2 := l.End.X.ToFloat64()
-	y2 := l.End.Y.ToFloat64()
+	x1 := WorldToScreen(l.Start.X)
+	y1 := WorldToScreen(l.Start.Y)
+	x2 := WorldToScreen(l.End.X)
+	y2 := WorldToScreen(l.End.Y)
 	if x1 > x2 {
 		x1, x2 = x2, x1
 		y1, y2 = y2, y1
@@ -189,10 +189,14 @@ func DrawCircle2(screen *ebiten.Image, x, y float64, r float64, color color.Colo
 	}
 }
 
+func WorldToScreen(val Int) float64 {
+	return val.ToFloat64() / Unit * 10
+}
+
 func DrawCircle(screen *ebiten.Image, c Circle, color color.Color) {
-	x := c.Center.X.ToFloat64()
-	y := c.Center.Y.ToFloat64()
-	r := c.Diameter.ToFloat64() / 2
+	x := WorldToScreen(c.Center.X)
+	y := WorldToScreen(c.Center.Y)
+	r := WorldToScreen(c.Diameter) / 2
 	// calculates the minimun angle between two pixels in a diagonal.
 	// you can multiply minAngle by a security factor like 0.9 just to be sure you wont have empty pixels in the circle
 	minAngle := math.Acos(1.0 - 1.0/r)
@@ -282,7 +286,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//op.GeoM.Translate(Real(g.w.Player1.Center.X), Real(g.w.Player1.Center.Y))
 	//screen.DrawImage(img1, op)
 
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("ActualTPS: %f", ebiten.ActualTPS()))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("x: %d y: %d", g.c.Center.X.DivBy(U(1)).ToInt64(), g.c.Center.Y.DivBy(U(1)).ToInt64()))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -307,9 +311,14 @@ func loadImage(str string) *ebiten.Image {
 func main() {
 	var g Game
 	//g.c = Circle{IPt(70, 200), I(100)}
-	g.c = Circle{IPt(270, 30), I(100)}
-	g.s = Square{IPt(300, 200), I(100)}
-	ebiten.SetWindowSize(460, 460)
+	//g.c = Circle{UPt(270, 30), U(100)}
+	//g.s = Square{UPt(300, 200), U(100)}
+	//g.c = Circle{UPt(270, 30), U(10)}
+	//g.s = Square{UPt(300, 200), U(10)}
+	g.c = Circle{UPt(50, 50), U(10)}
+	g.s = Square{UPt(50, 50), U(10)}
+	//ebiten.SetWindowSize(460, 460)
+	ebiten.SetWindowSize(1920, 1080)
 	ebiten.SetWindowTitle("Viewer")
 	ebiten.SetWindowPosition(10, 1080-470)
 	err := ebiten.RunGame(&g)
