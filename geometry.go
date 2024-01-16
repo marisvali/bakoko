@@ -409,6 +409,15 @@ func lineCircleIntersection3FactorsHelper(a, b, c, start, end Int) (bool, Int) {
 	// coord = start + sign * (k + sqrt(m))	// 2-factor intermediate
 	coord := start.Plus(sign.Times(k.Plus(m.Sqrt())))
 	if !coord.Between(start, end) {
+		tol := I(10)
+		if coord.Lt(start) && start.Minus(coord).Leq(tol) {
+			return true, start
+		}
+
+		if coord.Gt(end) && coord.Minus(end).Leq(tol) {
+			return true, end
+		}
+
 		return false, I(0)
 	}
 	return true, coord
