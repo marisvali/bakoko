@@ -14,9 +14,11 @@ var input Input
 var w World
 
 func init() {
+	w.BallSpeed = CU(12000)
+	w.BallDec = CU(20)
 	w.Player1 = Player{
 		Bounds: Circle{
-			Center:   UPt(0, 0),
+			Center:   UPt(140, 120),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(1),
@@ -28,6 +30,44 @@ func init() {
 		NBalls:   I(3),
 		BallType: I(2),
 		Health:   I(3)}
+	// Obstacle size of 30 is ok, divides 1920 and 1080 perfectly.
+	w.Obstacles.Init(I(15), I(15))
+	w.ObstacleSize = U(30)
+	for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
+		w.Obstacles.Set(row, I(0), I(1))
+		w.Obstacles.Set(row, w.Obstacles.NCols().Minus(I(1)), I(1))
+	}
+	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {
+		w.Obstacles.Set(I(0), col, I(1))
+		w.Obstacles.Set(w.Obstacles.NRows().Minus(I(1)), col, I(1))
+	}
+	w.Obstacles.Set(I(5), I(5), I(1))
+	w.Obstacles.Set(I(8), I(7), I(1))
+
+	w.Obstacles.Set(I(5), I(10), I(1))
+	w.Obstacles.Set(I(6), I(10), I(1))
+	w.Obstacles.Set(I(7), I(10), I(1))
+
+	w.Obstacles.Set(I(10), I(10), I(1))
+	w.Obstacles.Set(I(11), I(10), I(1))
+	w.Obstacles.Set(I(12), I(10), I(1))
+
+	//for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
+	//	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {
+	//		if row.Plus(col).Mod(I(2)).Eq(I(0)) {
+	//			w.Obstacles.Set(row, col, I(0))
+	//		} else {
+	//			w.Obstacles.Set(row, col, I(1))
+	//		}
+	//	}
+	//}
+	w.Obs = []Square{
+		//{UPt(200, 350), U(100)},
+		//{UPt(200, 150), U(100)},
+		//{UPt(300, 250), U(100)},
+		//{UPt(100, 250), U(100)},
+	}
+
 	//w.Balls = []Ball{
 	//	{
 	//		Bounds: Circle{
@@ -47,23 +87,6 @@ func init() {
 	//			Diameter: U(30)},
 	//		Type: I(2),
 	//	}}
-	w.Obstacles.Init(I(10), I(10))
-	w.ObstacleSize = U(30)
-	for y := I(0); y.Lt(w.Obstacles.NCols()); y.Inc() {
-		for x := I(0); x.Lt(w.Obstacles.NCols()); x.Inc() {
-			if y.Plus(x).Mod(I(2)).Eq(I(0)) {
-				w.Obstacles.Set(x, y, I(0))
-			} else {
-				w.Obstacles.Set(x, y, I(1))
-			}
-		}
-	}
-	w.Obs = []Square{
-		{UPt(200, 350), U(100)},
-		{UPt(200, 150), U(100)},
-		{UPt(300, 250), U(100)},
-		{UPt(100, 250), U(100)},
-	}
 }
 func main5() {
 	originalWorld := w

@@ -62,6 +62,6 @@ func UPt(xUnits int64, yUnits int64) Pt {
 	return Pt{I(xUnits).Times(I(Unit)), I(yUnits).Times(I(Unit))}
 }
 
-func MU(numUnits int64) Int {
-	return I(numUnits).Times(I(Unit)).DivBy(I(1000))
+func CU(numUnits int64) Int {
+	return I(numUnits).Times(I(Unit)).DivBy(I(100))
 }

@@ -112,6 +112,8 @@ func (g *Game) Update() error {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
+	//pressedKeys = inpututil.AppendJustPressedKeys(pressedKeys) //for debug purposes
+
 	// Choose which is the active player based on Alt being pressed.
 	playerInput := PlayerInput{}
 	playerInput.MoveLeft = slices.Contains(pressedKeys, ebiten.KeyA)
@@ -229,16 +231,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorNeutralLight1)
 
 	// Obstacle grid
-	//for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
-	//	for x := I(0); x.Lt(g.w.Obstacles.NCols()); x.Inc() {
-	//		if g.w.Obstacles.Get(y, x).Eq(I(1)) {
-	//			xScreen := WorldToScreenFloat(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
-	//			yScreen := WorldToScreenFloat(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
-	//			diameter := WorldToScreenFloat(g.w.ObstacleSize)
-	//			DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
-	//		}
-	//	}
-	//}
+	for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
+		for x := I(0); x.Lt(g.w.Obstacles.NCols()); x.Inc() {
+			if g.w.Obstacles.Get(y, x).Eq(I(1)) {
+				xScreen := WorldToScreenFloat(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+				yScreen := WorldToScreenFloat(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+				diameter := WorldToScreenFloat(g.w.ObstacleSize)
+				DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+			}
+		}
+	}
 
 	// debug squares
 	for _, sq := range g.w.Obs {

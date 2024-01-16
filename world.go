@@ -47,12 +47,12 @@ func (m *Matrix) Init(nRows, nCols Int) {
 	m.cells = make([]Int, nRows.Times(nCols).ToInt64())
 }
 
-func (m *Matrix) Set(x, y, val Int) {
-	m.cells[y.Times(m.nCols).Plus(x).ToInt64()] = val
+func (m *Matrix) Set(row, col, val Int) {
+	m.cells[row.Times(m.nCols).Plus(col).ToInt64()] = val
 }
 
-func (m *Matrix) Get(x, y Int) Int {
-	return m.cells[y.Times(m.nCols).Plus(x).ToInt64()]
+func (m *Matrix) Get(row, col Int) Int {
+	return m.cells[row.Times(m.nCols).Plus(col).ToInt64()]
 }
 
 func (m *Matrix) NRows() Int {
@@ -71,6 +71,8 @@ type World struct {
 	Obstacles    Matrix
 	ObstacleSize Int
 	Obs          []Square
+	BallSpeed    Int
+	BallDec      Int
 }
 
 type PlayerInput struct {
@@ -138,7 +140,7 @@ func (i *Input) DeserializeFromFile(filename string) {
 	Deserialize(buf, i)
 }
 
-func ShootBall(player *Player, balls *[]Ball, pt Pt) {
+func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
 	if player.NBalls.Leq(I(0)) {
 		return
 	}
@@ -146,7 +148,7 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt) {
 	moveDir := player.Bounds.Center.To(pt)
 	//moveDir.SetLen(MU(6000))
 	moveDir.SetLen(U(1))
-	speed := MU(6000)
+	speed := ballSpeed
 
 	ball := Ball{
 		//Center:            Pt{player.Center.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Center.Y},
@@ -246,7 +248,7 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos P
 	}
 }
 
-func UpdateBallPositions(balls []Ball, s []Square) {
+func UpdateBallPositions(balls []Ball, s []Square, dec Int) {
 	// update the state of each ball (move it, make it collectible)
 	for idx := range balls {
 		ball := &balls[idx]
@@ -259,34 +261,58 @@ func UpdateBallPositions(balls []Ball, s []Square) {
 				ball.Speed = I(0)
 			} else {
 				// decrease speed by some deceleration
-				ball.Speed.Subtract(MU(200))
+				ball.Speed.Subtract(dec)
 				if ball.Speed.Lt(I(0)) {
 					ball.Speed = I(0)
 				}
 			}
 
 		}
-		if !ball.CanBeCollected && ball.Speed.Lt(MU(100)) {
+		if !ball.CanBeCollected && ball.Speed.Lt(CU(10)) {
 			ball.CanBeCollected = true
 		}
 	}
 }
 
-func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput) {
+func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
+	ballSpeed Int, squares []Square) {
+	newPos := player.Bounds.Center
+	//playerSpeed := U(50)
+	playerSpeed := U(3)
 	if input.MoveRight {
-		player.Bounds.Center.X.Add(U(3))
+		newPos.X.Add(playerSpeed)
 	}
 	if input.MoveLeft {
-		player.Bounds.Center.X.Subtract(U(3))
+		newPos.X.Subtract(playerSpeed)
 	}
 	if input.MoveUp {
-		player.Bounds.Center.Y.Subtract(U(3))
+		newPos.Y.Subtract(playerSpeed)
 	}
 	if input.MoveDown {
-		player.Bounds.Center.Y.Add(U(3))
+		newPos.Y.Add(playerSpeed)
 	}
+
+	intersects, circlePositionAtCollision, collisionNormal :=
+		CircleSquaresCollision(player.Bounds.Center, newPos, player.Bounds.Diameter, squares)
+
+	if !intersects {
+		player.Bounds.Center = newPos
+	}
+	//else {
+	//	player.Bounds.Center = circlePositionAtCollision
+	//	// Move a little away from the collision point. If we ever let the ball
+	//	// occupy a position where it is colliding with an obstacle, we get in
+	//	// all sorts of trouble with edge cases. All we want is to move the ball
+	//	// 1 integer unit away from the obstacle. We know what "away" means
+	//	// because we have the collision normal.
+	//	//maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
+	//	//offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
+	//	//// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+	//	//player.Bounds.Center.Add(offset.Times(U(10)))
+	//}
+
 	if input.Shoot {
-		ShootBall(player, balls, input.ShootPt)
+		ShootBall(player, balls, input.ShootPt, ballSpeed)
 	}
 }
 
@@ -328,13 +354,30 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 	*balls = newBalls
 }
 
-func (w *World) Step(input *Input, frameIdx int) {
-	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input)
-	if frameIdx == 10 {
-		ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
+func ObstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
+	for row := I(0); row.Lt(obstacles.NRows()); row.Inc() {
+		for col := I(0); col.Lt(obstacles.NCols()); col.Inc() {
+			if obstacles.Get(row, col).Neq(I(0)) {
+				half := obstacleSize.DivBy(I(2))
+				squares = append(squares, Square{
+					Center: Pt{col.Times(obstacleSize).Plus(half), row.Times(obstacleSize).Plus(half)},
+					Size:   obstacleSize,
+				})
+			}
+		}
 	}
-	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input)
-	UpdateBallPositions(w.Balls, w.Obs)
+	return
+}
+
+func (w *World) Step(input *Input, frameIdx int) {
+	squares := ObstaclesToSquares(w.Obstacles, w.ObstacleSize)
+
+	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input, w.BallSpeed, squares)
+	if frameIdx == 10 {
+		//ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
+	}
+	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input, w.BallSpeed, squares)
+	UpdateBallPositions(w.Balls, squares, w.BallDec)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
 	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
 }
