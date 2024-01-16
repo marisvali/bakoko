@@ -429,6 +429,26 @@ func CirclesIntersect(c1, c2 Circle) bool {
 	return c1.Center.SquaredDistTo(c2.Center).Leq(squaredMaxDist)
 }
 
+func CircleSquareIntersect(c Circle, s Square) bool {
+	// size / 2 + size % 2 to compensate for the potential precision of the division
+	halfSize := s.Size.DivBy(I(2)).Plus(s.Size.Mod(I(2)))
+
+	// square corners
+	upperLeftCorner := Pt{s.Center.X.Minus(halfSize), s.Center.Y.Minus(halfSize)}
+	lowerLeftCorner := Pt{s.Center.X.Minus(halfSize), s.Center.Y.Plus(halfSize)}
+	upperRightCorner := Pt{s.Center.X.Plus(halfSize), s.Center.Y.Minus(halfSize)}
+	lowerRightCorner := Pt{s.Center.X.Plus(halfSize), s.Center.Y.Plus(halfSize)}
+	corners := []Pt{upperLeftCorner, lowerLeftCorner, upperRightCorner, lowerRightCorner}
+
+	radiusSquared := c.Diameter.DivBy(I(2)).Plus(c.Diameter.Mod(I(2))).Sqr()
+	for _, corner := range corners {
+		if c.Center.To(corner).SquaredLen().Lt(radiusSquared) {
+			return true
+		}
+	}
+	return false
+}
+
 type DebugInfo struct {
 	Points  []Pt
 	Lines   []Line

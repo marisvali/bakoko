@@ -276,40 +276,82 @@ func UpdateBallPositions(balls []Ball, s []Square, dec Int) {
 
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	ballSpeed Int, squares []Square) {
-	newPos := player.Bounds.Center
-	//playerSpeed := U(50)
-	playerSpeed := U(3)
-	if input.MoveRight {
-		newPos.X.Add(playerSpeed)
-	}
-	if input.MoveLeft {
-		newPos.X.Subtract(playerSpeed)
-	}
-	if input.MoveUp {
-		newPos.Y.Subtract(playerSpeed)
-	}
-	if input.MoveDown {
-		newPos.Y.Add(playerSpeed)
+
+	{
+		newPos := player.Bounds.Center
+		//playerSpeed := U(50)
+		playerSpeed := U(3)
+		if input.MoveRight {
+			newPos.X.Add(playerSpeed)
+		}
+		if input.MoveLeft {
+			newPos.X.Subtract(playerSpeed)
+		}
+
+		oldPos := player.Bounds.Center
+
+		intersects, circlePositionAtCollision, collisionNormal :=
+			CircleSquaresCollision(oldPos, newPos, player.Bounds.Diameter, squares)
+
+		if !intersects {
+			player.Bounds.Center = newPos
+		} else {
+			adjustedNewPos := circlePositionAtCollision
+			maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
+			offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
+			// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+			adjustedNewPos.Add(offset.Times(I(25)))
+
+			// Find out if the point where we move to is outside the collision zone.
+			// Unfortunately the only way to test the collision zone is with a travel
+			// line. This means I have to test by travelling from oldPos to the new pos.
+			intersects2, circlePositionAtCollision2, collisionNormal2 :=
+				CircleSquaresCollision(oldPos, adjustedNewPos, player.Bounds.Diameter, squares)
+			if intersects2 {
+				fmt.Print("i ", circlePositionAtCollision2, collisionNormal2)
+			}
+
+			player.Bounds.Center = adjustedNewPos
+		}
 	}
 
-	intersects, circlePositionAtCollision, collisionNormal :=
-		CircleSquaresCollision(player.Bounds.Center, newPos, player.Bounds.Diameter, squares)
+	{
+		newPos := player.Bounds.Center
+		//playerSpeed := U(50)
+		playerSpeed := U(3)
+		if input.MoveUp {
+			newPos.Y.Subtract(playerSpeed)
+		}
+		if input.MoveDown {
+			newPos.Y.Add(playerSpeed)
+		}
 
-	if !intersects {
-		player.Bounds.Center = newPos
+		oldPos := player.Bounds.Center
+
+		intersects, circlePositionAtCollision, collisionNormal :=
+			CircleSquaresCollision(oldPos, newPos, player.Bounds.Diameter, squares)
+
+		if !intersects {
+			player.Bounds.Center = newPos
+		} else {
+			adjustedNewPos := circlePositionAtCollision
+			maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
+			offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
+			// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+			adjustedNewPos.Add(offset.Times(I(25)))
+
+			// Find out if the point where we move to is outside the collision zone.
+			// Unfortunately the only way to test the collision zone is with a travel
+			// line. This means I have to test by travelling from oldPos to the new pos.
+			intersects2, circlePositionAtCollision2, collisionNormal2 :=
+				CircleSquaresCollision(oldPos, adjustedNewPos, player.Bounds.Diameter, squares)
+			if intersects2 {
+				fmt.Print("i ", circlePositionAtCollision2, collisionNormal2)
+			}
+
+			player.Bounds.Center = adjustedNewPos
+		}
 	}
-	//else {
-	//	player.Bounds.Center = circlePositionAtCollision
-	//	// Move a little away from the collision point. If we ever let the ball
-	//	// occupy a position where it is colliding with an obstacle, we get in
-	//	// all sorts of trouble with edge cases. All we want is to move the ball
-	//	// 1 integer unit away from the obstacle. We know what "away" means
-	//	// because we have the collision normal.
-	//	//maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
-	//	//offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
-	//	//// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-	//	//player.Bounds.Center.Add(offset.Times(U(10)))
-	//}
 
 	if input.Shoot {
 		ShootBall(player, balls, input.ShootPt, ballSpeed)

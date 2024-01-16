@@ -33,24 +33,24 @@ func init() {
 	// Obstacle size of 30 is ok, divides 1920 and 1080 perfectly.
 	w.Obstacles.Init(I(15), I(15))
 	w.ObstacleSize = U(30)
-	for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
-		w.Obstacles.Set(row, I(0), I(1))
-		w.Obstacles.Set(row, w.Obstacles.NCols().Minus(I(1)), I(1))
-	}
-	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {
-		w.Obstacles.Set(I(0), col, I(1))
-		w.Obstacles.Set(w.Obstacles.NRows().Minus(I(1)), col, I(1))
-	}
+	//for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
+	//	w.Obstacles.Set(row, I(0), I(1))
+	//	w.Obstacles.Set(row, w.Obstacles.NCols().Minus(I(1)), I(1))
+	//}
+	//for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {
+	//	w.Obstacles.Set(I(0), col, I(1))
+	//	w.Obstacles.Set(w.Obstacles.NRows().Minus(I(1)), col, I(1))
+	//}
 	w.Obstacles.Set(I(5), I(5), I(1))
-	w.Obstacles.Set(I(8), I(7), I(1))
-
-	w.Obstacles.Set(I(5), I(10), I(1))
-	w.Obstacles.Set(I(6), I(10), I(1))
-	w.Obstacles.Set(I(7), I(10), I(1))
-
-	w.Obstacles.Set(I(10), I(10), I(1))
-	w.Obstacles.Set(I(11), I(10), I(1))
-	w.Obstacles.Set(I(12), I(10), I(1))
+	//w.Obstacles.Set(I(8), I(7), I(1))
+	//
+	//w.Obstacles.Set(I(5), I(10), I(1))
+	//w.Obstacles.Set(I(6), I(10), I(1))
+	//w.Obstacles.Set(I(7), I(10), I(1))
+	//
+	//w.Obstacles.Set(I(10), I(10), I(1))
+	//w.Obstacles.Set(I(11), I(10), I(1))
+	//w.Obstacles.Set(I(12), I(10), I(1))
 
 	//for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
 	//	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {
