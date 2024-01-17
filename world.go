@@ -274,84 +274,59 @@ func UpdateBallPositions(balls []Ball, s []Square, dec Int) {
 	}
 }
 
+func MovePlayer(player *Player, newPos Pt, squares []Square) {
+	oldPos := player.Bounds.Center
+
+	intersects, circlePositionAtCollision, collisionNormal :=
+		CircleSquaresCollision(oldPos, newPos, player.Bounds.Diameter, squares)
+
+	if !intersects {
+		player.Bounds.Center = newPos
+	} else {
+		adjustedNewPos := circlePositionAtCollision
+		maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
+		offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
+		// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+		adjustedNewPos.Add(offset.Times(I(50)))
+
+		// Find out if the point where we move to is outside the collision zone.
+		// Unfortunately the only way to test the collision zone is with a travel
+		// line. This means I have to test by travelling from oldPos to the new pos.
+		//intersects2, circlePositionAtCollision2, collisionNormal2 :=
+		//	CircleSquaresCollision(oldPos, adjustedNewPos, player.Bounds.Diameter, squares)
+		//if intersects2 {
+		//	fmt.Print("i ", circlePositionAtCollision2, collisionNormal2)
+		//}
+
+		player.Bounds.Center = adjustedNewPos
+	}
+}
+
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	ballSpeed Int, squares []Square) {
 
-	{
-		newPos := player.Bounds.Center
-		//playerSpeed := U(50)
-		playerSpeed := U(3)
-		if input.MoveRight {
-			newPos.X.Add(playerSpeed)
-		}
-		if input.MoveLeft {
-			newPos.X.Subtract(playerSpeed)
-		}
+	//playerSpeed := U(50)
+	playerSpeed := U(3)
 
-		oldPos := player.Bounds.Center
-
-		intersects, circlePositionAtCollision, collisionNormal :=
-			CircleSquaresCollision(oldPos, newPos, player.Bounds.Diameter, squares)
-
-		if !intersects {
-			player.Bounds.Center = newPos
-		} else {
-			adjustedNewPos := circlePositionAtCollision
-			maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
-			offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
-			// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-			adjustedNewPos.Add(offset.Times(I(25)))
-
-			// Find out if the point where we move to is outside the collision zone.
-			// Unfortunately the only way to test the collision zone is with a travel
-			// line. This means I have to test by travelling from oldPos to the new pos.
-			intersects2, circlePositionAtCollision2, collisionNormal2 :=
-				CircleSquaresCollision(oldPos, adjustedNewPos, player.Bounds.Diameter, squares)
-			if intersects2 {
-				fmt.Print("i ", circlePositionAtCollision2, collisionNormal2)
-			}
-
-			player.Bounds.Center = adjustedNewPos
-		}
+	// Try horizontal movement first.
+	newPosX := player.Bounds.Center
+	if input.MoveRight {
+		newPosX.X.Add(playerSpeed)
 	}
-
-	{
-		newPos := player.Bounds.Center
-		//playerSpeed := U(50)
-		playerSpeed := U(3)
-		if input.MoveUp {
-			newPos.Y.Subtract(playerSpeed)
-		}
-		if input.MoveDown {
-			newPos.Y.Add(playerSpeed)
-		}
-
-		oldPos := player.Bounds.Center
-
-		intersects, circlePositionAtCollision, collisionNormal :=
-			CircleSquaresCollision(oldPos, newPos, player.Bounds.Diameter, squares)
-
-		if !intersects {
-			player.Bounds.Center = newPos
-		} else {
-			adjustedNewPos := circlePositionAtCollision
-			maxCoord := Max(collisionNormal.X.Abs(), collisionNormal.Y.Abs())
-			offset := Pt{collisionNormal.X.DivBy(maxCoord), collisionNormal.Y.DivBy(maxCoord)}
-			// Offset is now one of these: {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-			adjustedNewPos.Add(offset.Times(I(25)))
-
-			// Find out if the point where we move to is outside the collision zone.
-			// Unfortunately the only way to test the collision zone is with a travel
-			// line. This means I have to test by travelling from oldPos to the new pos.
-			intersects2, circlePositionAtCollision2, collisionNormal2 :=
-				CircleSquaresCollision(oldPos, adjustedNewPos, player.Bounds.Diameter, squares)
-			if intersects2 {
-				fmt.Print("i ", circlePositionAtCollision2, collisionNormal2)
-			}
-
-			player.Bounds.Center = adjustedNewPos
-		}
+	if input.MoveLeft {
+		newPosX.X.Subtract(playerSpeed)
 	}
+	MovePlayer(player, newPosX, squares)
+
+	// Now try vertical movement.
+	newPosY := player.Bounds.Center
+	if input.MoveUp {
+		newPosY.Y.Subtract(playerSpeed)
+	}
+	if input.MoveDown {
+		newPosY.Y.Add(playerSpeed)
+	}
+	MovePlayer(player, newPosY, squares)
 
 	if input.Shoot {
 		ShootBall(player, balls, input.ShootPt, ballSpeed)
