@@ -13,7 +13,7 @@ func init() {
 }
 
 func RSeed(seed Int) {
-	rand.New(rand.NewSource(seed.ToInt64()))
+	randomGenerator = rand.New(rand.NewSource(seed.ToInt64()))
 }
 
 // Returns a random number in the interval [min, max].
