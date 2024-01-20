@@ -7,9 +7,15 @@ import (
 	"os"
 )
 
+var CheckCrashes = true
+var CheckFailed error
+
 func Check(e error) {
 	if e != nil {
-		panic(e)
+		CheckFailed = e
+		if CheckCrashes {
+			panic(e)
+		}
 	}
 }
 

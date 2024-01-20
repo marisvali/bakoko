@@ -300,15 +300,15 @@ func main() {
 	frameIdx := 0
 	player1 := interfacePeer{}
 	player1.endpoint = "localhost:56901"
-	//player2 := interfacePeer{}
-	//player2.endpoint = "localhost:56902"
+	player2 := interfacePeer{}
+	player2.endpoint = "localhost:56902"
 	for w.Over.Eq(I(0)) {
 		var input Input
 		input.Player1Input = player1.getInput()
-		//input.Player2Input = player2.getInput()
+		input.Player2Input = player2.getInput()
 		w.Step(&input, frameIdx)
 		player1.sendWorld(&w)
-		//player2.sendWorld(&w)
+		player2.sendWorld(&w)
 
 		if input.Player1Input.Quit || input.Player2Input.Quit {
 			break

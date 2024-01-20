@@ -11,6 +11,7 @@ import (
 	"image/color"
 	"io"
 	"log"
+	"math"
 	"net"
 	"os"
 	. "playful-patterns.com/bakoko"
@@ -126,10 +127,18 @@ func (g *Game) Update() error {
 	}
 
 	//g.w.Step(&input)
-	g.peer.sendInput(&playerInput)
+	if slices.Contains(pressedKeys, ebiten.KeyShift) {
+		g.peer.sendInput(&PlayerInput{})
+		g.peer2.sendInput(&playerInput)
+	} else {
+		g.peer.sendInput(&playerInput)
+		g.peer2.sendInput(&PlayerInput{})
+	}
+
 	//var w World
 	//g.peer.getWorld(&w)
 	g.peer.getWorld(&g.w)
+	g.peer2.getWorld(&g.w) // redundant but clears the buffers
 	//input.SerializeToFile("input.bin")
 	//TouchFile("input-ready")
 	//WaitForFile("world-ready")
@@ -190,26 +199,57 @@ func (g *Game) DrawPlayer(
 	ballImage *ebiten.Image,
 	healthImage *ebiten.Image,
 	player *Player) {
+
 	// Draw the player sprite.
-	x := g.WorldToScreen(player.Bounds.Center.X)
-	y := g.WorldToScreen(player.Bounds.Center.Y)
-	diam := g.WorldToScreen(player.Bounds.Diameter)
+	x := g.WorldToScreen(player.Bounds.Center.X) + g.data.PlayerOffsetX*g.data.ScaleFactor
+	y := g.WorldToScreen(player.Bounds.Center.Y) + g.data.PlayerOffsetY*g.data.ScaleFactor
+	diam := g.WorldToScreen(player.Bounds.Diameter) + g.data.PlayerOffsetSize*g.data.ScaleFactor
 	g.DrawSprite(playerImage, x, y, diam)
 
 	// Draw a small sprite for each ball that the player has.
+	realDiam := g.WorldToScreen(player.Bounds.Diameter)
 	for idx := int64(0); idx < player.NBalls.ToInt64(); idx++ {
-		smallX := x - diam/2 - 10*g.data.ScaleFactor
-		smallY := y + (float64(idx*12)+10)*g.data.ScaleFactor - diam/2
+		smallX := x - realDiam/2 - 10*g.data.ScaleFactor
+		smallY := y + (float64(idx*12)+10)*g.data.ScaleFactor - realDiam/2
 		smallDiam := float64(10) * g.data.ScaleFactor
 		g.DrawSprite(ballImage, smallX, smallY, smallDiam)
 	}
 
 	// Draw a small sprite for each health point that the player has.
 	for idx := int64(0); idx < player.Health.ToInt64(); idx++ {
-		smallX := x + (float64(idx*12)+12)*g.data.ScaleFactor - diam/2
-		smallY := y - diam/2 - 10*g.data.ScaleFactor
+		smallX := x + (float64(idx*12)+12)*g.data.ScaleFactor - realDiam/2
+		smallY := y - realDiam/2 - 10*g.data.ScaleFactor
 		smallDiam := float64(10) * g.data.ScaleFactor
 		g.DrawSprite(healthImage, smallX, smallY, smallDiam)
+	}
+
+	// Draw actual bounds, for debugging purposes.
+	if g.data.DrawDebugGraphics {
+		g.DrawCircle(player.Bounds, color.White)
+	}
+}
+
+func (g *Game) DrawCircle(c Circle, color color.Color) {
+	x := g.WorldToScreen(c.Center.X)
+	y := g.WorldToScreen(c.Center.Y)
+	r := g.WorldToScreen(c.Diameter) / 2
+	// calculates the minimun angle between two pixels in a diagonal.
+	// you can multiply minAngle by a security factor like 0.9 just to be sure you wont have empty pixels in the circle
+	minAngle := math.Acos(1.0 - 1.0/r)
+
+	for angle := float64(0); angle <= 360.0; angle += minAngle {
+		x1 := r * math.Cos(angle)
+		y1 := r * math.Sin(angle)
+		DrawPixel(g.screen, int(x+x1), int(y+y1), color)
+	}
+}
+
+func DrawPixel(screen *ebiten.Image, x, y int, color color.Color) {
+	size := 0
+	for ax := x - size; ax <= x+size; ax++ {
+		for ay := y - size; ay <= y+size; ay++ {
+			screen.Set(ax, ay, color)
+		}
 	}
 }
 
@@ -274,14 +314,19 @@ func init() {
 }
 
 type GameData struct {
-	ScaleFactor  float64
-	WindowWidth  int
-	WindowHeight int
+	ScaleFactor       float64
+	WindowWidth       int
+	WindowHeight      int
+	PlayerOffsetX     float64
+	PlayerOffsetY     float64
+	PlayerOffsetSize  float64
+	DrawDebugGraphics bool
 }
 
 type Game struct {
 	w          World
 	peer       simulationPeer
+	peer2      simulationPeer
 	player1    *ebiten.Image
 	player2    *ebiten.Image
 	ball1      *ebiten.Image
@@ -301,6 +346,10 @@ func loadImage(str string) *ebiten.Image {
 
 	img, _, err := image.Decode(file)
 	Check(err)
+	if err != nil {
+		return nil
+	}
+
 	return ebiten.NewImageFromImage(img)
 }
 
@@ -332,14 +381,26 @@ func (g *Game) gameDataChangedOnDisk() bool {
 }
 
 func (g *Game) loadGameData() {
-	g.ball1 = loadImage("data/ball1.png")
-	g.ball2 = loadImage("data/ball2.png")
-	g.player1 = loadImage("data/player1.png")
-	g.player2 = loadImage("data/player2.png")
-	g.health = loadImage("data/health.png")
-	g.obstacle = loadImage("data/obstacle.png")
-	g.background = loadImage("data/background.png")
-	loadJSON("data/gui.json", &g.data)
+	// Read from the disk over and over until a full read is possible.
+	// This repetition is meant to avoid crashes due to reading files
+	// while they are still being written.
+	// It's a hack but possibly a quick and very useful one.
+	CheckCrashes = false
+	for {
+		CheckFailed = nil
+		g.ball1 = loadImage("data/ball1.png")
+		g.ball2 = loadImage("data/ball2.png")
+		g.player1 = loadImage("data/player1.png")
+		g.player2 = loadImage("data/player2.png")
+		g.health = loadImage("data/health.png")
+		g.obstacle = loadImage("data/obstacle.png")
+		g.background = loadImage("data/background.png")
+		loadJSON("data/gui.json", &g.data)
+		if CheckFailed == nil {
+			break
+		}
+	}
+	CheckCrashes = true
 
 	ebiten.SetWindowSize(g.data.WindowWidth, g.data.WindowHeight)
 	ebiten.SetWindowTitle("Viewer")
@@ -349,6 +410,7 @@ func (g *Game) loadGameData() {
 func main() {
 	var g Game
 	g.peer.endpoint = os.Args[1] // localhost:56901 or localhost:56902
+	g.peer2.endpoint = "localhost:56902"
 	g.loadGameData()
 
 	err := ebiten.RunGame(&g)
