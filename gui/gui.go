@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"image"
 	"image/color"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -31,23 +33,6 @@ func colorHex(hexVal int) color.Color {
 		A: 255,
 	}
 }
-
-var colorPrimary = colorHex(0x05B2DC)
-var colorPrimaryDark1 = colorHex(0x026d88)
-var colorPrimaryDark2 = colorHex(0x002f3c)
-var colorPrimaryLight1 = colorHex(0x76cae7)
-var colorPrimaryLight2 = colorHex(0xb4e1f2)
-
-var colorSecondary = colorHex(0xf52d00)
-var colorSecondaryDark1 = colorHex(0x981800)
-var colorSecondaryDark2 = colorHex(0x440600)
-var colorSecondaryLight1 = colorHex(0xff7d64)
-var colorSecondaryLight2 = colorHex(0xffb7a7)
-
-var colorNeutral = colorHex(0x191308)
-var colorNeutralLight1 = colorHex(0x2e2e2e)
-var colorNeutralLight2 = colorHex(0x808080)
-var colorNeutralLight3 = colorHex(0xdedede)
 
 type simulationPeer struct {
 	endpoint string
@@ -123,14 +108,21 @@ func (g *Game) Update() error {
 
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
+	if slices.Contains(justPressedKeys, ebiten.KeyR) {
+		g.loadGameData()
+	}
+
+	if g.gameDataChangedOnDisk() {
+		g.loadGameData()
+	}
 
 	// Get mouse input.
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		playerInput.Shoot = true
 		x, y := ebiten.CursorPosition()
 		// Translate from screen coordinates to in-world units.
-		playerInput.ShootPt.X = ScreenToWorld(x)
-		playerInput.ShootPt.Y = ScreenToWorld(y)
+		playerInput.ShootPt.X = g.ScreenToWorld(x)
+		playerInput.ShootPt.Y = g.ScreenToWorld(y)
 	}
 
 	//g.w.Step(&input)
@@ -145,114 +137,111 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(pos.X.ToFloat64(), pos.Y.ToFloat64())
-	screen.DrawImage(img, op)
+//func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
+//	op := &ebiten.DrawImageOptions{}
+//	op.GeoM.Translate(pos.X.ToFloat64(), pos.Y.ToFloat64())
+//	screen.DrawImage(img, op)
+//}
+
+func (g *Game) WorldToScreen(val Int) float64 {
+	return val.ToFloat64() / Unit * g.data.ScaleFactor
 }
 
-func WorldToScreen(val Int) int {
-	return int(val.ToInt64()) / Unit
+func (g *Game) ScreenToWorld(val int) Int {
+	return U(int64(float64(val) / g.data.ScaleFactor))
 }
 
-func WorldToScreenFloat(val Int) float64 {
-	return val.ToFloat64() / Unit
-}
-
-func ScreenToWorld(val int) Int {
-	return U(int64(val))
-}
-
-func DrawCircle(screen *ebiten.Image, img *ebiten.Image, x float64, y float64,
-	diameter float64) {
+func (g *Game) DrawSprite(img *ebiten.Image,
+	x float64, y float64, targetSize float64) {
 	op := &ebiten.DrawImageOptions{}
 
-	// Resize image to fit the diameter of the circle we want to draw.
+	// Resize image to fit the targetSize of the circle we want to draw.
 	// This kind of scaling is very useful during development when the final
 	// sizes are not decided, and thus it's impossible to have final sprites.
 	// For an actual release, scaling should be avoided.
-	size := img.Bounds().Size()
-	newDx := diameter / float64(size.X)
-	newDy := diameter / float64(size.Y)
+	imgSize := img.Bounds().Size()
+	newDx := targetSize / float64(imgSize.X)
+	newDy := targetSize / float64(imgSize.Y)
 	op.GeoM.Scale(newDx, newDy)
 
 	// Place the image so that (x, y) falls at its center,
 	// not its top-left corner.
-	op.GeoM.Translate(x-diameter/2, y-diameter/2)
+	op.GeoM.Translate(x-targetSize/2, y-targetSize/2)
 
-	screen.DrawImage(img, op)
+	g.screen.DrawImage(img, op)
 
 	// Draw a small white rectangle in the center of the image,
 	// to help debug issues with scaling and positioning.
-	dbgImg := ebiten.NewImage(3, 3)
-	dbgImg.Fill(color.RGBA{
-		R: 255,
-		G: 255,
-		B: 255,
-		A: 255,
-	})
-	op = &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(newDx, newDy)
-	op.GeoM.Translate(x, y)
-	screen.DrawImage(dbgImg, op)
+	//dbgImg := ebiten.NewImage(3, 3)
+	//dbgImg.Fill(color.RGBA{
+	//	R: 255,
+	//	G: 255,
+	//	B: 255,
+	//	A: 255,
+	//})
+	//op = &ebiten.DrawImageOptions{}
+	//op.GeoM.Scale(newDx, newDy)
+	//op.GeoM.Translate(x, y)
+	//screen.DrawImage(dbgImg, op)
 }
 
-func DrawPlayer(
-	screen *ebiten.Image,
+func (g *Game) DrawPlayer(
 	playerImage *ebiten.Image,
 	ballImage *ebiten.Image,
 	healthImage *ebiten.Image,
 	player *Player) {
 	// Draw the player sprite.
-	x := WorldToScreenFloat(player.Bounds.Center.X)
-	y := WorldToScreenFloat(player.Bounds.Center.Y)
-	diam := WorldToScreenFloat(player.Bounds.Diameter)
-	DrawCircle(screen, playerImage, x, y, diam)
+	x := g.WorldToScreen(player.Bounds.Center.X)
+	y := g.WorldToScreen(player.Bounds.Center.Y)
+	diam := g.WorldToScreen(player.Bounds.Diameter)
+	g.DrawSprite(playerImage, x, y, diam)
 
 	// Draw a small sprite for each ball that the player has.
 	for idx := int64(0); idx < player.NBalls.ToInt64(); idx++ {
-		smallX := x - diam/2 - 10
-		smallY := y + float64(idx*12) - diam/2 + 10
-		smallDiam := float64(10)
-		DrawCircle(screen, ballImage, smallX, smallY, smallDiam)
+		smallX := x - diam/2 - 10*g.data.ScaleFactor
+		smallY := y + (float64(idx*12)+10)*g.data.ScaleFactor - diam/2
+		smallDiam := float64(10) * g.data.ScaleFactor
+		g.DrawSprite(ballImage, smallX, smallY, smallDiam)
 	}
 
 	// Draw a small sprite for each health point that the player has.
 	for idx := int64(0); idx < player.Health.ToInt64(); idx++ {
-		smallX := x + float64(idx*12) - diam/2 + 15
-		smallY := y - diam/2 - 10
-		smallDiam := float64(10)
-		DrawCircle(screen, healthImage, smallX, smallY, smallDiam)
+		smallX := x + (float64(idx*12)+12)*g.data.ScaleFactor - diam/2
+		smallY := y - diam/2 - 10*g.data.ScaleFactor
+		smallDiam := float64(10) * g.data.ScaleFactor
+		g.DrawSprite(healthImage, smallX, smallY, smallDiam)
 	}
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	g.screen = screen
+
 	// Background
-	screen.Fill(colorNeutralLight1)
+	screen.Fill(g.background.At(0, 0))
 
 	// Obstacle grid
 	for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
 		for x := I(0); x.Lt(g.w.Obstacles.NCols()); x.Inc() {
 			if g.w.Obstacles.Get(y, x).Eq(I(1)) {
-				xScreen := WorldToScreenFloat(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
-				yScreen := WorldToScreenFloat(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
-				diameter := WorldToScreenFloat(g.w.ObstacleSize)
-				DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+				xScreen := g.WorldToScreen(x.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+				yScreen := g.WorldToScreen(y.Times(g.w.ObstacleSize).Plus(g.w.ObstacleSize.DivBy(I(2))))
+				diameter := g.WorldToScreen(g.w.ObstacleSize)
+				g.DrawSprite(g.obstacle, xScreen, yScreen, diameter)
 			}
 		}
 	}
 
 	// debug squares
 	for _, sq := range g.w.Obs {
-		xScreen := WorldToScreenFloat(sq.Center.X)
-		yScreen := WorldToScreenFloat(sq.Center.Y)
-		diameter := WorldToScreenFloat(sq.Size)
-		DrawCircle(screen, g.obstacle, xScreen, yScreen, diameter)
+		xScreen := g.WorldToScreen(sq.Center.X)
+		yScreen := g.WorldToScreen(sq.Center.Y)
+		diameter := g.WorldToScreen(sq.Size)
+		g.DrawSprite(g.obstacle, xScreen, yScreen, diameter)
 	}
 
 	// Players
-	DrawPlayer(screen, g.player1, g.ball1, g.health, &g.w.Player1)
-	DrawPlayer(screen, g.player2, g.ball2, g.health, &g.w.Player2)
+	g.DrawPlayer(g.player1, g.ball1, g.health, &g.w.Player1)
+	g.DrawPlayer(g.player2, g.ball2, g.health, &g.w.Player2)
 
 	// Balls
 	for _, ball := range g.w.Balls {
@@ -260,10 +249,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if ball.Type.Eq(I(2)) {
 			ballImage = g.ball2
 		}
-		DrawCircle(screen, ballImage,
-			WorldToScreenFloat(ball.Bounds.Center.X),
-			WorldToScreenFloat(ball.Bounds.Center.Y),
-			WorldToScreenFloat(ball.Bounds.Diameter))
+		g.DrawSprite(ballImage,
+			g.WorldToScreen(ball.Bounds.Center.X),
+			g.WorldToScreen(ball.Bounds.Center.Y),
+			g.WorldToScreen(ball.Bounds.Diameter))
 	}
 
 	//img1 := ebiten.NewImage(50, 50)
@@ -273,6 +262,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//screen.DrawImage(img1, op)
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("ActualTPS: %f", ebiten.ActualTPS()))
+
+	g.screen = nil
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -282,15 +273,25 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func init() {
 }
 
+type GameData struct {
+	ScaleFactor  float64
+	WindowWidth  int
+	WindowHeight int
+}
+
 type Game struct {
-	w        World
-	peer     simulationPeer
-	player1  *ebiten.Image
-	player2  *ebiten.Image
-	ball1    *ebiten.Image
-	ball2    *ebiten.Image
-	health   *ebiten.Image
-	obstacle *ebiten.Image
+	w          World
+	peer       simulationPeer
+	player1    *ebiten.Image
+	player2    *ebiten.Image
+	ball1      *ebiten.Image
+	ball2      *ebiten.Image
+	health     *ebiten.Image
+	obstacle   *ebiten.Image
+	background *ebiten.Image
+	screen     *ebiten.Image
+	data       GameData
+	times      []time.Time
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -303,18 +304,53 @@ func loadImage(str string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
+func loadJSON(filename string, v any) {
+	file, err := os.Open(filename)
+	Check(err)
+	bytes, err := io.ReadAll(file)
+	Check(err)
+	err = json.Unmarshal(bytes, v)
+	Check(err)
+}
+
+func (g *Game) gameDataChangedOnDisk() bool {
+	files, err := os.ReadDir("data")
+	Check(err)
+	if len(files) != len(g.times) {
+		g.times = make([]time.Time, len(files))
+	}
+	changed := false
+	for idx, file := range files {
+		info, err := file.Info()
+		Check(err)
+		if g.times[idx] != info.ModTime() {
+			changed = true
+			g.times[idx] = info.ModTime()
+		}
+	}
+	return changed
+}
+
+func (g *Game) loadGameData() {
+	g.ball1 = loadImage("data/ball1.png")
+	g.ball2 = loadImage("data/ball2.png")
+	g.player1 = loadImage("data/player1.png")
+	g.player2 = loadImage("data/player2.png")
+	g.health = loadImage("data/health.png")
+	g.obstacle = loadImage("data/obstacle.png")
+	g.background = loadImage("data/background.png")
+	loadJSON("data/gui.json", &g.data)
+
+	ebiten.SetWindowSize(g.data.WindowWidth, g.data.WindowHeight)
+	ebiten.SetWindowTitle("Viewer")
+	ebiten.SetWindowPosition(10, 1080-10-g.data.WindowHeight)
+}
+
 func main() {
 	var g Game
 	g.peer.endpoint = os.Args[1] // localhost:56901 or localhost:56902
-	g.ball1 = loadImage("sprites/ball1.png")
-	g.ball2 = loadImage("sprites/ball2.png")
-	g.player1 = loadImage("sprites/player1.png")
-	g.player2 = loadImage("sprites/player2.png")
-	g.health = loadImage("sprites/health.png")
-	g.obstacle = loadImage("sprites/obstacle.png")
-	ebiten.SetWindowSize(460, 460)
-	ebiten.SetWindowTitle("Viewer")
-	ebiten.SetWindowPosition(10, 1080-470)
+	g.loadGameData()
+
 	err := ebiten.RunGame(&g)
 	Check(err)
 }

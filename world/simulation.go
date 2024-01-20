@@ -97,14 +97,14 @@ func init() {
 	w.BallDec = CU(20)
 	w.Player1 = Player{
 		Bounds: Circle{
-			Center:   UPt(140, 120),
+			Center:   UPt(140, 170),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(1),
 		Health:   I(3)}
 	w.Player2 = Player{
 		Bounds: Circle{
-			Center:   UPt(0, 0),
+			Center:   UPt(65, 65),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(2),
