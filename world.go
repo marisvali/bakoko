@@ -83,6 +83,7 @@ type PlayerInput struct {
 	Shoot     bool
 	ShootPt   Pt
 	Quit      bool
+	Reload    bool
 }
 
 type Input struct {

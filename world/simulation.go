@@ -92,7 +92,7 @@ func manualLevel() (m Matrix) {
 	return
 }
 
-func init() {
+func setupWorld() {
 	w.BallSpeed = CU(1200)
 	w.BallDec = CU(20)
 	w.Player1 = Player{
@@ -297,6 +297,7 @@ func (p *interfacePeer) sendWorld(w *World) {
 }
 
 func main() {
+	setupWorld()
 	frameIdx := 0
 	player1 := interfacePeer{}
 	player1.endpoint = "localhost:56901"
@@ -306,6 +307,10 @@ func main() {
 		var input Input
 		input.Player1Input = player1.getInput()
 		input.Player2Input = player2.getInput()
+		if input.Player1Input.Reload || input.Player2Input.Reload {
+			setupWorld()
+		}
+
 		w.Step(&input, frameIdx)
 		player1.sendWorld(&w)
 		player2.sendWorld(&w)

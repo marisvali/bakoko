@@ -109,9 +109,7 @@ func (g *Game) Update() error {
 
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
-	if slices.Contains(justPressedKeys, ebiten.KeyR) {
-		g.loadGameData()
-	}
+	playerInput.Reload = slices.Contains(justPressedKeys, ebiten.KeyR)
 
 	if g.gameDataChangedOnDisk() {
 		g.loadGameData()
