@@ -116,3 +116,7 @@ func (p *Pt) AddLen(extraLen Int) {
 	}
 	p.Scale(newLen, oldLen)
 }
+
+func (p *Pt) Eq(other Pt) bool {
+	return p.X.Eq(other.X) && p.Y.Eq(other.Y)
+}

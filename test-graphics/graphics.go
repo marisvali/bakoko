@@ -190,7 +190,7 @@ func DrawCircle2(screen *ebiten.Image, x, y float64, r float64, color color.Colo
 }
 
 func WorldToScreen(val Int) float64 {
-	return val.ToFloat64() / Unit * 10
+	return val.ToFloat64() / Unit
 }
 
 func DrawCircle(screen *ebiten.Image, c Circle, color color.Color) {
@@ -223,7 +223,19 @@ func DrawSquare(screen *ebiten.Image, s Square, color color.Color) {
 	DrawLine(screen, Line{lowerRightCorner, upperRightCorner}, color)
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
+func DrawFilledSquare(screen *ebiten.Image, s Square, col color.Color) {
+	size := WorldToScreen(s.Size)
+	x := WorldToScreen(s.Center.X) - size/2
+	y := WorldToScreen(s.Center.Y) - size/2
+
+	img := ebiten.NewImage(int(size), int(size))
+	img.Fill(col)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(x, y)
+	screen.DrawImage(img, op)
+}
+
+func (g *Game) DrawCircleSquareIntersection(screen *ebiten.Image) {
 	// Background
 	screen.Fill(colorNeutralLight1)
 	//line := Line{IPt(200, 100), IPt(100, 300)}
@@ -289,6 +301,135 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("x: %d y: %d", g.c.Center.X.DivBy(U(1)).ToInt64(), g.c.Center.Y.DivBy(U(1)).ToInt64()))
 }
 
+func intToCol(ival int64) color.Color {
+	switch ival {
+	case 0:
+		return color.RGBA{25, 25, 25, 0}
+	case 1:
+		return color.RGBA{150, 0, 0, 0}
+	case 2:
+		return color.RGBA{0, 150, 0, 0}
+	case 3:
+		return color.RGBA{0, 0, 150, 0}
+	case 4:
+		return color.RGBA{150, 150, 0, 0}
+	case 5:
+		return color.RGBA{0, 150, 150, 0}
+	case 6:
+		return color.RGBA{150, 0, 150, 0}
+	case 7:
+		return color.RGBA{100, 150, 100, 0}
+	}
+	return color.Black
+}
+
+func DrawMatrix(screen *ebiten.Image, m Matrix, squareSize Int) {
+	for y := I(0); y.Lt(m.NRows()); y.Inc() {
+		for x := I(0); x.Lt(m.NCols()); x.Inc() {
+			var s Square
+			s.Center.X = x.Times(squareSize).Plus(squareSize.DivBy(I(2)))
+			s.Center.Y = y.Times(squareSize).Plus(squareSize.DivBy(I(2)))
+			s.Size = squareSize
+
+			var col color.Color
+			col = color.RGBA{160, 160, 160, 0}
+			DrawSquare(screen, s, col)
+
+			mVal := m.Get(y, x).ToInt64()
+			DrawFilledSquare(screen, s, intToCol(mVal))
+		}
+	}
+}
+
+func validNeighbor(m Matrix, pt Pt) bool {
+	return pt.X.Geq(I(0)) &&
+		pt.Y.Geq(I(0)) &&
+		pt.X.Lt(m.NCols()) &&
+		pt.Y.Lt(m.NRows()) &&
+		m.Get(pt.Y, pt.X).Eq(I(0))
+}
+
+func getNeighbours(m Matrix, pt Pt) (ns []Pt) {
+	potentials := []Pt{
+		{pt.X.Minus(I(1)), pt.Y},
+		{pt.X, pt.Y.Minus(I(1))},
+		{pt.X.Plus(I(1)), pt.Y},
+		{pt.X, pt.Y.Plus(I(1))},
+		//diagonal neighbours
+		{pt.X.Minus(I(1)), pt.Y.Minus(I(1))},
+		{pt.X.Plus(I(1)), pt.Y.Plus(I(1))},
+		{pt.X.Plus(I(1)), pt.Y.Minus(I(1))},
+		{pt.X.Minus(I(1)), pt.Y.Plus(I(1))},
+	}
+
+	for _, p := range potentials {
+		if validNeighbor(m, p) {
+			ns = append(ns, p)
+		}
+	}
+	return
+}
+
+func getPath(parents map[Pt]Pt, end Pt) (path []Pt) {
+	node := end
+	var ok = true
+	for ok {
+		path = append(path, node)
+		node, ok = parents[node]
+	}
+	slices.Reverse(path)
+	return
+}
+
+func findPath(m Matrix, start Pt, end Pt) []Pt {
+	var queue []Pt
+	queue = append(queue, start)
+	parents := make(map[Pt]Pt)
+	idx := 0
+	for idx < len(queue) {
+		// peek the first element from the queue
+		topEl := queue[idx]
+		if topEl.Eq(end) {
+			return getPath(parents, end)
+		}
+
+		ns := getNeighbours(m, topEl)
+		for _, n := range ns {
+			if !slices.Contains(queue, n) {
+				parents[n] = topEl
+				queue = append(queue, n)
+			}
+		}
+
+		// pop the first element out of the queue
+		idx++
+	}
+	return []Pt{}
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	// Background
+	screen.Fill(colorNeutralLight1)
+
+	var m Matrix
+	m.Init(I(20), I(20))
+	m.Set(I(0), I(0), I(1))
+	m.Set(I(3), I(3), I(1))
+	m.Set(I(4), I(3), I(1))
+	m.Set(I(5), I(3), I(1))
+	m.Set(I(6), I(3), I(1))
+	m.Set(I(3), I(4), I(1))
+	m.Set(I(3), I(5), I(1))
+	m.Set(I(3), I(6), I(1))
+
+	path := findPath(m, Pt{I(0), I(0)}, Pt{I(10), I(10)})
+	for _, node := range path {
+		m.Set(node.Y, node.X, I(2))
+	}
+
+	DrawMatrix(screen, m, U(20))
+}
+
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return outsideWidth, outsideHeight
 }
@@ -317,8 +458,8 @@ func main() {
 	//g.s = Square{UPt(300, 200), U(10)}
 	g.c = Circle{UPt(50, 50), U(10)}
 	g.s = Square{UPt(50, 50), U(10)}
-	//ebiten.SetWindowSize(460, 460)
-	ebiten.SetWindowSize(1920, 1080)
+	ebiten.SetWindowSize(460, 460)
+	//ebiten.SetWindowSize(1920, 1080)
 	ebiten.SetWindowTitle("Viewer")
 	ebiten.SetWindowPosition(10, 1080-470)
 	err := ebiten.RunGame(&g)
