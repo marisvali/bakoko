@@ -3,6 +3,7 @@ module playful-patterns.com/bakoko
 go 1.21.1
 
 require (
+	github.com/fzipp/astar v0.2.0
 	github.com/hajimehoshi/ebiten/v2 v2.6.3
 	golang.org/x/image v0.14.0
 )

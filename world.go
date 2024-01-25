@@ -55,12 +55,29 @@ func (m *Matrix) Get(row, col Int) Int {
 	return m.cells[row.Times(m.nCols).Plus(col).ToInt64()]
 }
 
+func (m *Matrix) InBounds(pt Pt) bool {
+	return pt.X.IsNonNegative() &&
+		pt.Y.IsNonNegative() &&
+		pt.Y.Lt(m.nRows) &&
+		pt.X.Lt(m.nCols)
+}
+
 func (m *Matrix) NRows() Int {
 	return m.nRows
 }
 
 func (m *Matrix) NCols() Int {
 	return m.nCols
+}
+
+func (m *Matrix) PtToIndex(p Pt) Int {
+	return p.Y.Times(m.nCols).Plus(p.X)
+}
+
+func (m *Matrix) IndexToPt(i Int) (p Pt) {
+	p.X = i.Mod(m.nCols)
+	p.Y = i.DivBy(m.nCols)
+	return
 }
 
 type World struct {

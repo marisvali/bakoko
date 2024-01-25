@@ -13,85 +13,6 @@ import . "playful-patterns.com/bakoko/ints"
 var input Input
 var w World
 
-func randomLevel(nRows, nCols Int) (m Matrix) {
-	m.Init(nRows, nCols)
-
-	// Set left and right borders.
-	for row := I(0); row.Lt(m.NRows()); row.Inc() {
-		m.Set(row, I(0), I(1))
-		m.Set(row, m.NCols().Minus(I(1)), I(1))
-	}
-
-	// Set top and bottom borders.
-	for col := I(0); col.Lt(m.NCols()); col.Inc() {
-		m.Set(I(0), col, I(1))
-		m.Set(m.NRows().Minus(I(1)), col, I(1))
-	}
-
-	extra := RInt(I(5), I(15))
-	for i := I(0); i.Lt(extra); i.Inc() {
-		row := RInt(I(1), m.NRows().Minus(I(1)))
-		col := RInt(I(1), m.NCols().Minus(I(1)))
-		m.Set(row, col, I(1))
-	}
-
-	return
-}
-
-func manualLevel() (m Matrix) {
-	var level string
-	level = `
-<|><|><|><|><|><|><|><|><|><|><|><|><|><|><|>
-<|>             <|>                       <|>
-<|>             <|>                       <|>
-<|>       <|><|><|><|><|><|>              <|>
-<|>                                       <|>
-<|>                                       <|>
-<|>                              <|>      <|>
-<|>               <|>            <|>      <|>
-<|>                              <|>      <|>
-<|>                              <|>      <|>
-<|>            <|><|>                     <|>
-<|>                                       <|>
-<|>                                       <|>
-<|>                                       <|>
-<|><|><|><|><|><|><|><|><|><|><|><|><|><|><|>
-`
-
-	row := -1
-	col := 0
-	maxCol := 0
-	for i := 0; i < len(level); i++ {
-		c := level[i]
-		if c == '`' {
-			continue
-		} else if c == '\n' {
-			maxCol = col
-			col = 0
-			row++
-		}
-		col++
-	}
-	m.Init(I(int64(row+1)), I(int64(maxCol/3+1)))
-
-	row = -1
-	col = 0
-	for i := 0; i < len(level); i++ {
-		c := level[i]
-		if c == '`' {
-			continue
-		} else if c == '\n' {
-			col = 0
-			row++
-		} else if c == '<' {
-			m.Set(I(int64(row)), I(int64(col)/3), I(1))
-		}
-		col++
-	}
-
-	return
-}
-
 func setupWorld() {
 	w.BallSpeed = CU(1200)
 	w.BallDec = CU(20)
@@ -114,7 +35,7 @@ func setupWorld() {
 	//w.Obstacles = level1()
 	//RSeed(I(9))
 	//w.Obstacles = randomLevel(I(15), I(15))
-	w.Obstacles = manualLevel()
+	w.Obstacles = ManualLevel()
 
 	//for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
 	//	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {

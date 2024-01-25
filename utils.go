@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 )
 
 var CheckCrashes = true
@@ -83,4 +84,12 @@ func Serialize(w io.Writer, data any) {
 func Deserialize(r io.Reader, data any) {
 	err := binary.Read(r, binary.LittleEndian, data)
 	Check(err)
+}
+
+type TimedFunction func()
+
+func Duration(function TimedFunction) float64 {
+	start := time.Now()
+	function()
+	return time.Since(start).Seconds()
 }

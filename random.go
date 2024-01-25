@@ -20,7 +20,7 @@ func RSeed(seed Int) {
 // min must be smaller than max.
 // The difference beween min and max must be at most max.MaxInt64 - 1.
 func RInt(min Int, max Int) Int {
-	if max.Leq(min) {
+	if max.Lt(min) {
 		panic(fmt.Errorf("min larger than max: %d %d", min, max))
 	}
 

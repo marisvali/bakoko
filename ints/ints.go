@@ -113,6 +113,10 @@ func (a Int) ToInt64() int64 {
 	return a.Val
 }
 
+func (a Int) ToInt() int {
+	return int(a.Val)
+}
+
 func (a Int) ToFloat64() float64 {
 	return float64(a.Val)
 }
@@ -143,6 +147,10 @@ func (a Int) Geq(b Int) bool {
 
 func (a Int) IsPositive() bool {
 	return a.Val > 0
+}
+
+func (a Int) IsZero() bool {
+	return a.Val == 0
 }
 
 func (a Int) IsNegative() bool {
