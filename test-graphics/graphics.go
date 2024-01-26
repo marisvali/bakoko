@@ -73,6 +73,20 @@ func (g *Game) Update() error {
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 
+	step2 := I(1)
+	if slices.Contains(justPressedKeys, ebiten.KeyA) {
+		g.endPt.X.Subtract(step2)
+	}
+	if slices.Contains(justPressedKeys, ebiten.KeyD) {
+		g.endPt.X.Add(step2)
+	}
+	if slices.Contains(justPressedKeys, ebiten.KeyW) {
+		g.endPt.Y.Subtract(step2)
+	}
+	if slices.Contains(justPressedKeys, ebiten.KeyS) {
+		g.endPt.Y.Add(step2)
+	}
+
 	// Get mouse input.
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		//x, y := ebiten.CursorPosition()
@@ -346,7 +360,16 @@ func (g *Game) DrawMatrix(screen *ebiten.Image, m Matrix, squareSize Int) {
 func (g *Game) Draw(screen *ebiten.Image) {
 	// Background
 	screen.Fill(colorNeutralLight1)
-	g.DrawMatrix(screen, g.m, g.squareSize)
+
+	path := g.pathfinding.FindPath(g.startPt, g.endPt)
+	m2 := g.m.Clone()
+	for i := range path {
+		m2.Set(path[i].Y, path[i].X, I(2))
+	}
+	m2.Set(g.startPt.Y, g.startPt.X, I(3))
+	m2.Set(g.endPt.Y, g.endPt.X, I(3))
+
+	g.DrawMatrix(screen, m2, g.squareSize)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -354,11 +377,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 type Game struct {
-	c          Circle
-	s          Square
-	m          Matrix
-	img        *ebiten.Image
-	squareSize Int
+	c           Circle
+	s           Square
+	m           Matrix
+	img         *ebiten.Image
+	squareSize  Int
+	startPt     Pt
+	endPt       Pt
+	pathfinding Pathfinding
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -376,12 +402,18 @@ func main() {
 	//m := RandomLevel(I(50), I(90), I(1000), I(1000))
 	//m := ManualLevel()
 	g.m = RandomLevel(I(20), I(40), I(200), I(200))
-	g.squareSize = U(50)
+	g.pathfinding.Initialize(g.m)
+	//g.squareSize = U(50)
+	g.squareSize = U(20)
+	g.startPt = Pt{I(5), I(5)}
+	g.endPt = Pt{I(15), I(15)}
 
 	g.c = Circle{UPt(50, 50), U(10)}
 	g.s = Square{UPt(50, 50), U(10)}
-	windowWidth := 1920
-	windowHeight := 1080
+	//windowWidth := 1920
+	//windowHeight := 1080
+	windowWidth := 800
+	windowHeight := 450
 	ebiten.SetWindowSize(windowWidth, windowHeight)
 	//ebiten.SetWindowSize(1920, 1080)
 	ebiten.SetWindowTitle("Viewer")

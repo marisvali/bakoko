@@ -16,8 +16,12 @@ func main() {
 	paths1 := astarUnmodified(m, pairs)
 	astarOptimized(m, pairs)
 	paths2 := dijkstra4(m, pairs)
+	paths3 := dijkstra5(m, pairs)
 
 	if !PathsAreTheSame(m, paths1, paths2) {
+		return
+	}
+	if !PathsAreTheSame(m, paths1, paths3) {
 		return
 	}
 	fmt.Println()

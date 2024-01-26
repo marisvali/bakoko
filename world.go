@@ -28,6 +28,13 @@ type Matrix struct {
 	nCols Int
 }
 
+func (m *Matrix) Clone() (c Matrix) {
+	c.nRows = m.nRows
+	c.nCols = m.nCols
+	c.cells = append(c.cells, m.cells...)
+	return
+}
+
 func (m *Matrix) Serialize(w io.Writer) {
 	Serialize(w, m.nRows)
 	Serialize(w, m.nCols)
