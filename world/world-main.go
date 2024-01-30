@@ -31,15 +31,13 @@ func setupWorld() {
 		NBalls:   I(3),
 		BallType: I(2),
 		Health:   I(3),
-		Speed:    U(1)}
+		Speed:    U(2)}
 	// Obstacle size of 30 is ok, divides 1920 and 1080 perfectly.
 	w.ObstacleSize = U(30)
 	//w.Obstacles = level1()
 	//RSeed(I(9))
 	//w.Obstacles = randomLevel(I(15), I(15))
 	w.Obstacles = ManualLevel()
-	w.Player2AI = new(PlayerAI)
-	w.Player2AI.PlayerObj = &w.Player2
 
 	//for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
 	//	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {

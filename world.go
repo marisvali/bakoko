@@ -3,7 +3,6 @@ package bakoko
 import (
 	"bytes"
 	"fmt"
-	"image/color"
 	"io"
 	. "playful-patterns.com/bakoko/ints"
 )
@@ -99,10 +98,6 @@ type World struct {
 	BallSpeed    Int
 	BallDec      Int
 	DebugPoints  []DebugPoint
-	// This is here temporarily, normally the AI will act outside of the world
-	// package, as a player input module, the same way we handle the input
-	// for human-controlled player 1.
-	Player2AI *PlayerAI
 }
 
 type PlayerInput struct {
@@ -372,97 +367,6 @@ func GetMatrixPointClosestToWorld(m Matrix, size Int, offset Pt, pos Pt) Pt {
 	//return worldTentative
 }
 
-type PlayerAI struct {
-	PlayerObj *Player
-	TargetPt  Pt
-	HasTarget bool
-}
-
-func PlayerIsAt(p *Player, pt Pt) bool {
-	return p.Bounds.Center.SquaredDistTo(pt).Lt(U(5).Sqr())
-}
-func (p *PlayerAI) Step(w *World) (input PlayerInput) {
-	player := p.PlayerObj
-	finalTarget := w.Player1.Bounds.Center
-
-	if p.HasTarget {
-		// If we're at the target, disable the target which signals we need
-		// a new path.
-		if PlayerIsAt(player, p.TargetPt) {
-			p.HasTarget = false
-		}
-	}
-
-	// Only compute a new path when we don't have a target to go to.
-	if !p.HasTarget && !PlayerIsAt(player, finalTarget) {
-		mw, sizeW, offsetW := GetWalkableMatrix(w.Obstacles, w.ObstacleSize, player.Bounds.Diameter)
-
-		playerPos := player.Bounds.Center
-		startPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, playerPos)
-		endPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, finalTarget)
-
-		w.DebugPoints = []DebugPoint{}
-		//w.Obs = []Square{
-		//	{Pt{U(100), U(100)}, U(10)},
-		//	{playerPos, U(10)},
-		//	{finalTarget, U(10)},
-		//}
-		for y := I(0); y.Lt(mw.NRows()); y.Inc() {
-			for x := I(0); x.Lt(mw.NCols()); x.Inc() {
-				var pt DebugPoint
-				pt.Pos = Pt{x.Times(sizeW), y.Times(sizeW)}
-				pt.Pos.Add(offsetW)
-				pt.Size = U(3)
-				if mw.Get(y, x).Eq(ZERO) {
-					pt.Col = color.RGBA{0, 0, 255, 255}
-				} else {
-					pt.Col = color.RGBA{255, 0, 0, 255}
-				}
-				w.DebugPoints = append(w.DebugPoints, pt)
-			}
-		}
-
-		var pathfinding Pathfinding
-		pathfinding.Initialize(mw)
-		path := pathfinding.FindPath(startPt, endPt)
-		// Transform path coordinates into world coordinates.
-		var pathWorld []Pt
-		for _, pt := range path {
-			pathWorld = append(pathWorld, pt.Times(sizeW))
-			w.DebugPoints = append(w.DebugPoints, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
-		}
-
-		w.DebugPoints = append(w.DebugPoints, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
-		w.DebugPoints = append(w.DebugPoints, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 123, 255, 255}})
-
-		if len(pathWorld) == 0 {
-			// Don't do anything.
-			p.HasTarget = false
-		} else {
-			// Remove the first point if the player is basically there.
-			if pathWorld[0].SquaredDistTo(playerPos).Lt(U(5).Sqr()) {
-				pathWorld = pathWorld[1:]
-			}
-
-			if len(pathWorld) == 0 {
-				// Just move towards the target.
-				p.HasTarget = true
-				p.TargetPt = finalTarget
-			} else {
-				// Move towards the next point in the path
-				p.HasTarget = true
-				p.TargetPt = pathWorld[0]
-			}
-		}
-	}
-
-	if p.HasTarget {
-		input = MoveStraightLine(player.Bounds.Center, p.TargetPt)
-	}
-
-	return
-}
-
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	ballSpeed Int, squares []Square) {
 
@@ -551,9 +455,7 @@ func (w *World) Step(input *Input, frameIdx int) {
 	if frameIdx == 10 {
 		//ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
 	}
-
-	aiInput := w.Player2AI.Step(w)
-	HandlePlayerInput(&w.Player2, &w.Balls, aiInput, w.BallSpeed, squares)
+	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input, w.BallSpeed, squares)
 
 	UpdateBallPositions(w.Balls, squares, w.BallDec)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)

@@ -127,16 +127,16 @@ func (g *Game) Update() error {
 	//g.w.Step(&input)
 	if slices.Contains(pressedKeys, ebiten.KeyShift) {
 		g.peer.sendInput(&PlayerInput{})
-		g.peer2.sendInput(&playerInput)
+		//g.peer2.sendInput(&playerInput)
 	} else {
 		g.peer.sendInput(&playerInput)
-		g.peer2.sendInput(&PlayerInput{})
+		//g.peer2.sendInput(&PlayerInput{})
 	}
 
 	//var w World
 	//g.peer.getWorld(&w)
 	g.peer.getWorld(&g.w)
-	g.peer2.getWorld(&g.w) // redundant but clears the buffers
+	//g.peer2.getWorld(&g.w) // redundant but clears the buffers
 	//input.SerializeToFile("input.bin")
 	//TouchFile("input-ready")
 	//WaitForFile("world-ready")
@@ -344,9 +344,9 @@ type GameData struct {
 }
 
 type Game struct {
-	w            World
-	peer         simulationPeer
-	peer2        simulationPeer
+	w    World
+	peer simulationPeer
+	//peer2        simulationPeer
 	player1      *ebiten.Image
 	player2      *ebiten.Image
 	ball1        *ebiten.Image
@@ -431,7 +431,7 @@ func (g *Game) loadGameData() {
 func main() {
 	var g Game
 	g.peer.endpoint = os.Args[1] // localhost:56901 or localhost:56902
-	g.peer2.endpoint = "localhost:56902"
+	//g.peer2.endpoint = "localhost:56902"
 	g.loadGameData()
 
 	err := ebiten.RunGame(&g)
