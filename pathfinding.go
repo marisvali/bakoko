@@ -20,17 +20,32 @@ func (p *Pathfinding) Initialize(m Matrix) {
 	p.m = m
 
 	// Turn matrix into an array of ints.
+	// This order is probably faster for accessing memory.
+	//dirs := []Pt{
+	//	// left/right
+	//	{I(1).Negative(), I(0)},
+	//	{I(1), I(0)},
+	//	// top
+	//	{I(1).Negative(), I(1).Negative()},
+	//	{I(0), I(1).Negative()},
+	//	{I(1), I(1).Negative()},
+	//	// bottom
+	//	{I(1).Negative(), I(1)},
+	//	{I(0), I(1)},
+	//	{I(1), I(1)},
+	//}
+	// This order is needed so that straight lines get priority
 	dirs := []Pt{
-		// left/right
+		// left/right/up/down
 		{I(1).Negative(), I(0)},
 		{I(1), I(0)},
-		// top
-		{I(1).Negative(), I(1).Negative()},
 		{I(0), I(1).Negative()},
-		{I(1), I(1).Negative()},
-		// bottom
-		{I(1).Negative(), I(1)},
 		{I(0), I(1)},
+
+		// diagonals
+		{I(1).Negative(), I(1).Negative()},
+		{I(1), I(1).Negative()},
+		{I(1).Negative(), I(1)},
 		{I(1), I(1)},
 	}
 	p.nDirs = len(dirs)

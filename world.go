@@ -21,6 +21,7 @@ type Player struct {
 	NBalls   Int
 	BallType Int
 	Health   Int
+	Speed    Int
 }
 
 type Matrix struct {
@@ -382,7 +383,7 @@ func PlayerIsAt(p *Player, pt Pt) bool {
 }
 func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 	player := p.PlayerObj
-	finalTarget := Pt{U(200), U(350)}
+	finalTarget := w.Player1.Bounds.Center
 
 	if p.HasTarget {
 		// If we're at the target, disable the target which signals we need
@@ -465,26 +466,23 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	ballSpeed Int, squares []Square) {
 
-	//playerSpeed := U(50)
-	playerSpeed := U(3)
-
 	// Try horizontal movement first.
 	newPosX := player.Bounds.Center
 	if input.MoveRight {
-		newPosX.X.Add(playerSpeed)
+		newPosX.X.Add(player.Speed)
 	}
 	if input.MoveLeft {
-		newPosX.X.Subtract(playerSpeed)
+		newPosX.X.Subtract(player.Speed)
 	}
 	MovePlayer(player, newPosX, squares)
 
 	// Now try vertical movement.
 	newPosY := player.Bounds.Center
 	if input.MoveUp {
-		newPosY.Y.Subtract(playerSpeed)
+		newPosY.Y.Subtract(player.Speed)
 	}
 	if input.MoveDown {
-		newPosY.Y.Add(playerSpeed)
+		newPosY.Y.Add(player.Speed)
 	}
 	MovePlayer(player, newPosY, squares)
 

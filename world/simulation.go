@@ -22,14 +22,16 @@ func setupWorld() {
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(1),
-		Health:   I(3)}
+		Health:   I(3),
+		Speed:    U(3)}
 	w.Player2 = Player{
 		Bounds: Circle{
 			Center:   UPt(70, 165),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(2),
-		Health:   I(3)}
+		Health:   I(3),
+		Speed:    U(1)}
 	// Obstacle size of 30 is ok, divides 1920 and 1080 perfectly.
 	w.ObstacleSize = U(30)
 	//w.Obstacles = level1()
