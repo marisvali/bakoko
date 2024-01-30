@@ -3,6 +3,7 @@ package bakoko
 import (
 	"bytes"
 	"fmt"
+	"image/color"
 	"io"
 	. "playful-patterns.com/bakoko/ints"
 )
@@ -94,9 +95,13 @@ type World struct {
 	Over         Int
 	Obstacles    Matrix
 	ObstacleSize Int
-	Obs          []Square
 	BallSpeed    Int
 	BallDec      Int
+	DebugPoints  []DebugPoint
+	// This is here temporarily, normally the AI will act outside of the world
+	// package, as a player input module, the same way we handle the input
+	// for human-controlled player 1.
+	Player2AI *PlayerAI
 }
 
 type PlayerInput struct {
@@ -123,8 +128,8 @@ func (w *World) Serialize() []byte {
 	Serialize(buf, w.Balls)
 	w.Obstacles.Serialize(buf)
 	Serialize(buf, w.ObstacleSize)
-	Serialize(buf, I(int64(len(w.Obs))))
-	Serialize(buf, w.Obs)
+	Serialize(buf, I(int64(len(w.DebugPoints))))
+	Serialize(buf, w.DebugPoints)
 	return buf.Bytes()
 }
 
@@ -139,8 +144,8 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &w.ObstacleSize)
 	var lenObs Int
 	Deserialize(buf, &lenObs)
-	w.Obs = make([]Square, lenObs.ToInt64())
-	Deserialize(buf, w.Obs)
+	w.DebugPoints = make([]DebugPoint, lenObs.ToInt64())
+	Deserialize(buf, w.DebugPoints)
 }
 
 func (w *World) SerializeToFile(filename string) {
@@ -176,7 +181,7 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
 	speed := ballSpeed
 
 	ball := Ball{
-		//Center:            Pt{player.Center.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Center.Y},
+		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
 		Bounds: Circle{
 			Center:   player.Bounds.Center,
 			Diameter: U(30)},
@@ -327,6 +332,136 @@ func MovePlayer(player *Player, newPos Pt, squares []Square) {
 	}
 }
 
+func MoveStraightLine(start, end Pt) (input PlayerInput) {
+	dx := end.X.Minus(start.X)
+	dy := end.Y.Minus(start.Y)
+
+	tol := U(2) // Should be greater than half of the player's speed.
+	if dx.Lt(tol.Negative()) {
+		input.MoveLeft = true
+	} else if dx.Gt(tol) {
+		input.MoveRight = true
+	}
+	if dy.Lt(tol.Negative()) {
+		input.MoveUp = true
+	} else if dy.Gt(tol) {
+		input.MoveDown = true
+	}
+	return
+}
+
+func GetMatrixPointClosestToWorld(m Matrix, size Int, offset Pt, pos Pt) Pt {
+	pos2 := pos.Minus(offset)
+	// Get point by doing integer division (rounding down).
+	tentative := pos2.DivBy(size)
+
+	// Round up if we are closer to the higher number than the lower number.
+	if pos2.X.Mod(size).Gt(size.DivBy(I(2))) {
+		tentative.X.Inc()
+	}
+	if pos2.Y.Mod(size).Gt(size.DivBy(I(2))) {
+		tentative.Y.Inc()
+	}
+	return tentative
+	// Convert back to world coordinates.
+	//worldTentative := Pt{
+	//	tentative.X.Times(size).Plus(offset.X),
+	//	tentative.Y.Times(size).Plus(offset.Y),
+	//}
+	//return worldTentative
+}
+
+type PlayerAI struct {
+	PlayerObj *Player
+	TargetPt  Pt
+	HasTarget bool
+}
+
+func PlayerIsAt(p *Player, pt Pt) bool {
+	return p.Bounds.Center.SquaredDistTo(pt).Lt(U(5).Sqr())
+}
+func (p *PlayerAI) Step(w *World) (input PlayerInput) {
+	player := p.PlayerObj
+	finalTarget := Pt{U(200), U(350)}
+
+	if p.HasTarget {
+		// If we're at the target, disable the target which signals we need
+		// a new path.
+		if PlayerIsAt(player, p.TargetPt) {
+			p.HasTarget = false
+		}
+	}
+
+	// Only compute a new path when we don't have a target to go to.
+	if !p.HasTarget && !PlayerIsAt(player, finalTarget) {
+		mw, sizeW, offsetW := GetWalkableMatrix(w.Obstacles, w.ObstacleSize, player.Bounds.Diameter)
+
+		playerPos := player.Bounds.Center
+		startPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, playerPos)
+		endPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, finalTarget)
+
+		w.DebugPoints = []DebugPoint{}
+		//w.Obs = []Square{
+		//	{Pt{U(100), U(100)}, U(10)},
+		//	{playerPos, U(10)},
+		//	{finalTarget, U(10)},
+		//}
+		for y := I(0); y.Lt(mw.NRows()); y.Inc() {
+			for x := I(0); x.Lt(mw.NCols()); x.Inc() {
+				var pt DebugPoint
+				pt.Pos = Pt{x.Times(sizeW), y.Times(sizeW)}
+				pt.Pos.Add(offsetW)
+				pt.Size = U(3)
+				if mw.Get(y, x).Eq(ZERO) {
+					pt.Col = color.RGBA{0, 0, 255, 255}
+				} else {
+					pt.Col = color.RGBA{255, 0, 0, 255}
+				}
+				w.DebugPoints = append(w.DebugPoints, pt)
+			}
+		}
+
+		var pathfinding Pathfinding
+		pathfinding.Initialize(mw)
+		path := pathfinding.FindPath(startPt, endPt)
+		// Transform path coordinates into world coordinates.
+		var pathWorld []Pt
+		for _, pt := range path {
+			pathWorld = append(pathWorld, pt.Times(sizeW))
+			w.DebugPoints = append(w.DebugPoints, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
+		}
+
+		w.DebugPoints = append(w.DebugPoints, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
+		w.DebugPoints = append(w.DebugPoints, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 123, 255, 255}})
+
+		if len(pathWorld) == 0 {
+			// Don't do anything.
+			p.HasTarget = false
+		} else {
+			// Remove the first point if the player is basically there.
+			if pathWorld[0].SquaredDistTo(playerPos).Lt(U(5).Sqr()) {
+				pathWorld = pathWorld[1:]
+			}
+
+			if len(pathWorld) == 0 {
+				// Just move towards the target.
+				p.HasTarget = true
+				p.TargetPt = finalTarget
+			} else {
+				// Move towards the next point in the path
+				p.HasTarget = true
+				p.TargetPt = pathWorld[0]
+			}
+		}
+	}
+
+	if p.HasTarget {
+		input = MoveStraightLine(player.Bounds.Center, p.TargetPt)
+	}
+
+	return
+}
+
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	ballSpeed Int, squares []Square) {
 
@@ -418,7 +553,10 @@ func (w *World) Step(input *Input, frameIdx int) {
 	if frameIdx == 10 {
 		//ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
 	}
-	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input, w.BallSpeed, squares)
+
+	aiInput := w.Player2AI.Step(w)
+	HandlePlayerInput(&w.Player2, &w.Balls, aiInput, w.BallSpeed, squares)
+
 	UpdateBallPositions(w.Balls, squares, w.BallDec)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
 	HandlePlayerBallInteraction(&w.Player2, &w.Balls)

@@ -29,75 +29,75 @@ func RandomLevel(nRows, nCols, extraMin, extraMax Int) (m Matrix) {
 
 func ManualLevel() (m Matrix) {
 	var level string
-	//	level = `
-	//<|><|><|><|><|><|><|><|><|><|><|><|><|><|><|>
-	//<|>             <|>                       <|>
-	//<|>             <|>                       <|>
-	//<|>       <|><|><|><|><|><|>              <|>
-	//<|>                                       <|>
-	//<|>                                       <|>
-	//<|>                              <|>      <|>
-	//<|>               <|>            <|>      <|>
-	//<|>                              <|>      <|>
-	//<|>                              <|>      <|>
-	//<|>            <|><|>                     <|>
-	//<|>                                       <|>
-	//<|>                                       <|>
-	//<|>                                       <|>
-	//<|><|><|><|><|><|><|><|><|><|><|><|><|><|><|>
-	//`
-
 	level = `
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-x   x                         x      x                 xx       x                x      x
-x   x     xx              x   x      x                  x       x    xxxxxxx     x  x   x
-x        xxx     x         x x       x          xx      x       x     xxxxxx     x      x
-xxx              x          x        x         xx       x       x                x  x   x
-x       x        x     xxxxxxxxxxxx   xx      xx        x  x    xxxxx      xx           x
-x       xx       x xxxxxxxxxx           xx  xx             x             xxxxx     x xx x
-xxx              x     x          x       xx               x   xx         xxxx          x
-x      x         x     x          x             xxxxxxxxxxxx    x    xx            xxxxxx
-x     xxx                    xxxx x                        x                  xxx       x
-x      x         x           x    x          xxx      x    xxxxxxxxxxxxxxxxx            x
-xxx             xxx     x    x    x    x    xxxx    xxx    x                            x
-x    xxxx        x                x    x            x x         xxx  x                  x
-x      xx   x         x           x    xxxx         x             xxxx   xxxxxx         x
-xxx    xx   x       xxx           x                                       xxxxx         x
-x           x       x   x   xx    x    x        xxxxxxxxxxxxxxxxxxx                     x
-x           x           x   xx         x                                                x
-x           x           x   xx     xxxxxxxxx      x    x     x     x   x   x    x  x    x
-x           x       x                             x    xxxxxxx     x   x   x    x  x    x
-x           x       x                   xxxxxx    x         x      x   x   x    x  x    x
-x           x     xxxxx                 xxxxx     x         x      x   x   x    x  x    x
-x       x                 xxxxxxxxxxx   xxxxx     x         x                           x
-x     xxx    xx                                             x      xxxxxxxxxxxxxxxx     x
-x   xxxxxx       xxx    xxxx                      xxxx      x                           x
-x     xxx               x       x         x       xxxx      x      xxxxxxxxxxxxxxxx     x
-x       x        xxxxxxxx       x         x       xxxx      x                           x
-x                               x         x       xxxx      x      xxxxxxxxxxxxxxxx     x
-x    xxxxxxxxxxxxxxxxxxxxxxxxxxxx         x                 x                           x
-x                               x         x          xx     x      xxxxxxxxxxxxxxxx     x
-xxxxxxxxxxxxxxxxxx              x                   xxx     x                           x
-x                      xxxxxxxxxxxxxxxxxxx        xxxxx            xx     xxxxxxxx      x
-x      xxxx                     x                xxxxxx              xxxxx         xx   x
-x     x    xx                                               xxxxxx                  x   x
-x     x      xx    xxxx                    xx  xx           xxxxxxx         x  xx   x   x
-x      x             x          x   xxx                                     x  xx       x
-x    x  x            x   x  x   x   xxx    xx  xx                           x       x   x
-x   x    x           x          x   xxx    xx  xx                           x  xx   x   x
-x  x                 x          x                              x         xxxx  xx   x   x
-x     xxxxxxxx       x   x  x   x    x     xxxxxxx             x            x       x   x
-x                    x          x    x     xxxxxxx             x            x    xxxxxxxx
-x         x                     x    x                         x            x           x
-x   x      xxx         x x      x     xxxxxx    x     xxxxxxxxxxxxxxxxxxx   x           x
-x   x                           x               x              x            x    xxxxxxxx
-x   x      xxxxxxxx    x x      x       xxx     x              x    x x     x           x
-x   x      xxxxxxxx             x         x     xxxxxxxxxxx   x     x x     x    xxxxxxxx
-x   x         xxxxx             x         x                    x            x           x
-x                               x     xxxxxxxxxx     x               x                  x
-x                                                    x               x                  x
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-`
+xxxxxxxxxxxxx
+x           x
+x  x     x  x
+x           x
+x           x
+x    x  x   x
+x           x
+x           x
+x           x
+x         xxx
+x           x
+x           x
+x           x
+x           x
+xxxxxxxxxxxxx
+	`
+	//
+	//	level = `
+	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	//x   x                         x      x                 xx       x                x      x
+	//x   x     xx              x   x      x                  x       x    xxxxxxx     x  x   x
+	//x        xxx     x         x x       x          xx      x       x     xxxxxx     x      x
+	//xxx              x          x        x         xx       x       x                x  x   x
+	//x       x        x     xxxxxxxxxxxx   xx      xx        x  x    xxxxx      xx           x
+	//x       xx       x xxxxxxxxxx           xx  xx             x             xxxxx     x xx x
+	//xxx              x     x          x       xx               x   xx         xxxx          x
+	//x      x         x     x          x             xxxxxxxxxxxx    x    xx            xxxxxx
+	//x     xxx                    xxxx x                        x                  xxx       x
+	//x      x         x           x    x          xxx      x    xxxxxxxxxxxxxxxxx            x
+	//xxx             xxx     x    x    x    x    xxxx    xxx    x                            x
+	//x    xxxx        x                x    x            x x         xxx  x                  x
+	//x      xx   x         x           x    xxxx         x             xxxx   xxxxxx         x
+	//xxx    xx   x       xxx           x                                       xxxxx         x
+	//x           x       x   x   xx    x    x        xxxxxxxxxxxxxxxxxxx                     x
+	//x           x           x   xx         x                                                x
+	//x           x           x   xx     xxxxxxxxx      x    x     x     x   x   x    x  x    x
+	//x           x       x                             x    xxxxxxx     x   x   x    x  x    x
+	//x           x       x                   xxxxxx    x         x      x   x   x    x  x    x
+	//x           x     xxxxx                 xxxxx     x         x      x   x   x    x  x    x
+	//x       x                 xxxxxxxxxxx   xxxxx     x         x                           x
+	//x     xxx    xx                                             x      xxxxxxxxxxxxxxxx     x
+	//x   xxxxxx       xxx    xxxx                      xxxx      x                           x
+	//x     xxx               x       x         x       xxxx      x      xxxxxxxxxxxxxxxx     x
+	//x       x        xxxxxxxx       x         x       xxxx      x                           x
+	//x                               x         x       xxxx      x      xxxxxxxxxxxxxxxx     x
+	//x    xxxxxxxxxxxxxxxxxxxxxxxxxxxx         x                 x                           x
+	//x                               x         x          xx     x      xxxxxxxxxxxxxxxx     x
+	//xxxxxxxxxxxxxxxxxx              x                   xxx     x                           x
+	//x                      xxxxxxxxxxxxxxxxxxx        xxxxx            xx     xxxxxxxx      x
+	//x      xxxx                     x                xxxxxx              xxxxx         xx   x
+	//x     x    xx                                               xxxxxx                  x   x
+	//x     x      xx    xxxx                    xx  xx           xxxxxxx         x  xx   x   x
+	//x      x             x          x   xxx                                     x  xx       x
+	//x    x  x            x   x  x   x   xxx    xx  xx                           x       x   x
+	//x   x    x           x          x   xxx    xx  xx                           x  xx   x   x
+	//x  x                 x          x                              x         xxxx  xx   x   x
+	//x     xxxxxxxx       x   x  x   x    x     xxxxxxx             x            x       x   x
+	//x                    x          x    x     xxxxxxx             x            x    xxxxxxxx
+	//x         x                     x    x                         x            x           x
+	//x   x      xxx         x x      x     xxxxxx    x     xxxxxxxxxxxxxxxxxxx   x           x
+	//x   x                           x               x              x            x    xxxxxxxx
+	//x   x      xxxxxxxx    x x      x       xxx     x              x    x x     x           x
+	//x   x      xxxxxxxx             x         x     xxxxxxxxxxx   x     x x     x    xxxxxxxx
+	//x   x         xxxxx             x         x                    x            x           x
+	//x                               x     xxxxxxxxxx     x               x                  x
+	//x                                                    x               x                  x
+	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	//`
 
 	row := -1
 	col := 0
@@ -110,11 +110,12 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 			maxCol = col
 			col = 0
 			row++
+			continue
 		}
 		col++
 	}
 	//m.Init(I(int64(row+1)), I(int64(maxCol/3+1)))
-	m.Init(I(int64(row+1)), I(int64(maxCol+1)))
+	m.Init(I(int64(row)), I(int64(maxCol)))
 
 	row = -1
 	col = 0
@@ -125,6 +126,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 		} else if c == '\n' {
 			col = 0
 			row++
+			continue
 		} else if c == 'x' {
 			m.Set(I(int64(row)), I(int64(col)), I(1))
 		}

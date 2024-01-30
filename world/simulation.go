@@ -18,14 +18,14 @@ func setupWorld() {
 	w.BallDec = CU(20)
 	w.Player1 = Player{
 		Bounds: Circle{
-			Center:   UPt(140, 170),
+			Center:   UPt(320, 170),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(1),
 		Health:   I(3)}
 	w.Player2 = Player{
 		Bounds: Circle{
-			Center:   UPt(65, 65),
+			Center:   UPt(70, 165),
 			Diameter: U(50)},
 		NBalls:   I(3),
 		BallType: I(2),
@@ -36,6 +36,8 @@ func setupWorld() {
 	//RSeed(I(9))
 	//w.Obstacles = randomLevel(I(15), I(15))
 	w.Obstacles = ManualLevel()
+	w.Player2AI = new(PlayerAI)
+	w.Player2AI.PlayerObj = &w.Player2
 
 	//for row := I(0); row.Lt(w.Obstacles.NRows()); row.Inc() {
 	//	for col := I(0); col.Lt(w.Obstacles.NCols()); col.Inc() {
@@ -46,29 +48,23 @@ func setupWorld() {
 	//		}
 	//	}
 	//}
-	w.Obs = []Square{
-		//{UPt(200, 350), U(100)},
-		//{UPt(200, 150), U(100)},
-		//{UPt(300, 250), U(100)},
-		//{UPt(100, 250), U(100)},
-	}
 
 	//w.Balls = []Ball{
 	//	{
 	//		Bounds: Circle{
-	//			Center:   UPt(120, 70),
+	//			Pos:   UPt(120, 70),
 	//			Diameter: U(30)},
 	//		Type: I(1),
 	//	},
 	//	{
 	//		Bounds: Circle{
-	//			Center:   UPt(90, 210),
+	//			Pos:   UPt(90, 210),
 	//			Diameter: U(30)},
 	//		Type: I(1),
 	//	},
 	//	{
 	//		Bounds: Circle{
-	//			Center:   UPt(190, 140),
+	//			Pos:   UPt(190, 140),
 	//			Diameter: U(30)},
 	//		Type: I(2),
 	//	}}

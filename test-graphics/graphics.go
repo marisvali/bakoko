@@ -120,7 +120,7 @@ func DrawPixel(screen *ebiten.Image, x, y int, color color.Color) {
 func DrawPixel2(screen *ebiten.Image, pt Pt, color color.Color) {
 	x := int(WorldToScreen(pt.X))
 	y := int(WorldToScreen(pt.Y))
-	size := 0
+	size := 2
 	for ax := x - size; ax <= x+size; ax++ {
 		for ay := y - size; ay <= y+size; ay++ {
 			screen.Set(ax, ay, color)
@@ -275,7 +275,7 @@ func (g *Game) DrawCircleSquareIntersection(screen *ebiten.Image) {
 	//c := Circle{IPt(200, 200), I(150)}
 	//DrawLine(screen, l, colorPrimary)
 	//DrawCircle(screen, c, colorPrimaryDark1)
-	//DrawPixel2(screen, c.Center, colorSecondaryLight2)
+	//DrawPixel2(screen, c.Pos, colorSecondaryLight2)
 	//
 	//intersects, pt := LineCircleIntersection(l, c)
 	//if intersects {
@@ -311,7 +311,7 @@ func (g *Game) DrawCircleSquareIntersection(screen *ebiten.Image) {
 	//img1 := ebiten.NewImage(50, 50)
 	//img1.Fill(colorPrimary)
 	//op := &ebiten.DrawImageOptions{}
-	//op.GeoM.Translate(Real(g.w.Player1.Center.X), Real(g.w.Player1.Center.Y))
+	//op.GeoM.Translate(Real(g.w.Player1.Pos.X), Real(g.w.Player1.Pos.Y))
 	//screen.DrawImage(img1, op)
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("x: %d y: %d", g.c.Center.X.DivBy(U(1)).ToInt64(), g.c.Center.Y.DivBy(U(1)).ToInt64()))
@@ -357,19 +357,40 @@ func (g *Game) DrawMatrix(screen *ebiten.Image, m Matrix, squareSize Int) {
 	}
 }
 
+func (g *Game) DrawMatrixPoints(
+	screen *ebiten.Image, m Matrix, squareSize Int, offset Pt) {
+	for y := I(0); y.Lt(m.NRows()); y.Inc() {
+		for x := I(0); x.Lt(m.NCols()); x.Inc() {
+			var s Square
+			s.Center.X = x.Times(squareSize).Plus(squareSize.DivBy(I(2))).Plus(offset.X)
+			s.Center.Y = y.Times(squareSize).Plus(squareSize.DivBy(I(2))).Plus(offset.Y)
+			s.Size = squareSize
+
+			mVal := m.Get(y, x).ToInt64()
+			DrawPixel2(screen, s.Center, intToCol(mVal))
+		}
+	}
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	// Background
 	screen.Fill(colorNeutralLight1)
 
-	path := g.pathfinding.FindPath(g.startPt, g.endPt)
 	m2 := g.m.Clone()
-	for i := range path {
-		m2.Set(path[i].Y, path[i].X, I(2))
-	}
-	m2.Set(g.startPt.Y, g.startPt.X, I(3))
-	m2.Set(g.endPt.Y, g.endPt.X, I(3))
+	// Draw path.
+	//path := g.pathfinding.FindPath(g.startPt, g.endPt)
+	//for i := range path {
+	//	m2.Set(path[i].Y, path[i].X, I(2))
+	//}
+	//m2.Set(g.startPt.Y, g.startPt.X, I(3))
+	//m2.Set(g.endPt.Y, g.endPt.X, I(3))
 
 	g.DrawMatrix(screen, m2, g.squareSize)
+
+	//charSize := g.squareSize.Plus(I(2))
+	charSize := g.squareSize.Times(I(2)).Plus(I(2))
+	mw, squareSizeW, offsetW := GetWalkableMatrix(g.m, g.squareSize, charSize)
+	g.DrawMatrixPoints(screen, mw, squareSizeW, offsetW)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -401,10 +422,11 @@ func main() {
 	var g Game
 	//m := RandomLevel(I(50), I(90), I(1000), I(1000))
 	//m := ManualLevel()
-	g.m = RandomLevel(I(20), I(40), I(200), I(200))
+	//g.m = RandomLevel(I(20), I(40), I(200), I(200))
+	g.m = ManualLevel()
 	g.pathfinding.Initialize(g.m)
 	//g.squareSize = U(50)
-	g.squareSize = U(20)
+	g.squareSize = U(40)
 	g.startPt = Pt{I(5), I(5)}
 	g.endPt = Pt{I(15), I(15)}
 
@@ -412,8 +434,8 @@ func main() {
 	g.s = Square{UPt(50, 50), U(10)}
 	//windowWidth := 1920
 	//windowHeight := 1080
-	windowWidth := 800
-	windowHeight := 450
+	windowWidth := 650
+	windowHeight := 650
 	ebiten.SetWindowSize(windowWidth, windowHeight)
 	//ebiten.SetWindowSize(1920, 1080)
 	ebiten.SetWindowTitle("Viewer")

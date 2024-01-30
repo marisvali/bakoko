@@ -251,6 +251,27 @@ func DrawPixel(screen *ebiten.Image, x, y int, color color.Color) {
 	}
 }
 
+func (g *Game) DrawFilledSquare(screen *ebiten.Image, s Square, col color.Color) {
+	size := int(g.WorldToScreen(s.Size))
+	x1 := int(g.WorldToScreen(s.Center.X)) - size/2
+	y1 := int(g.WorldToScreen(s.Center.Y)) - size/2
+	x2 := x1 + size
+	y2 := y1 + size
+	for y := y1; y <= y2; y++ {
+		for x := x1; x <= x2; x++ {
+			screen.Set(x, y, col)
+		}
+	}
+
+	//if g.filledSquare == nil {
+	//	g.filledSquare = ebiten.NewImage(int(size), int(size))
+	//}
+	//g.filledSquare.Fill(col)
+	//op := &ebiten.DrawImageOptions{}
+	//op.GeoM.Translate(x, y)
+	//screen.DrawImage(g.filledSquare, op)
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.screen = screen
 
@@ -269,14 +290,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	// debug squares
-	for _, sq := range g.w.Obs {
-		xScreen := g.WorldToScreen(sq.Center.X)
-		yScreen := g.WorldToScreen(sq.Center.Y)
-		diameter := g.WorldToScreen(sq.Size)
-		g.DrawSprite(g.obstacle, xScreen, yScreen, diameter)
-	}
-
 	// Players
 	g.DrawPlayer(g.player1, g.ball1, g.health, &g.w.Player1)
 	g.DrawPlayer(g.player2, g.ball2, g.health, &g.w.Player2)
@@ -293,10 +306,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.WorldToScreen(ball.Bounds.Diameter))
 	}
 
+	// debug squares
+	for _, p := range g.w.DebugPoints {
+		//xScreen := g.WorldToScreen(sq.Pos.X)
+		//yScreen := g.WorldToScreen(sq.Pos.Y)
+		//diameter := g.WorldToScreen(sq.Size)
+
+		g.DrawFilledSquare(screen, Square{p.Pos, p.Size}, p.Col)
+	}
+
 	//img1 := ebiten.NewImage(50, 50)
 	//img1.Fill(colorPrimary)
 	//op := &ebiten.DrawImageOptions{}
-	//op.GeoM.Translate(Real(g.w.Player1.Center.X), Real(g.w.Player1.Center.Y))
+	//op.GeoM.Translate(Real(g.w.Player1.Pos.X), Real(g.w.Player1.Pos.Y))
 	//screen.DrawImage(img1, op)
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("ActualTPS: %f", ebiten.ActualTPS()))
@@ -322,19 +344,20 @@ type GameData struct {
 }
 
 type Game struct {
-	w          World
-	peer       simulationPeer
-	peer2      simulationPeer
-	player1    *ebiten.Image
-	player2    *ebiten.Image
-	ball1      *ebiten.Image
-	ball2      *ebiten.Image
-	health     *ebiten.Image
-	obstacle   *ebiten.Image
-	background *ebiten.Image
-	screen     *ebiten.Image
-	data       GameData
-	times      []time.Time
+	w            World
+	peer         simulationPeer
+	peer2        simulationPeer
+	player1      *ebiten.Image
+	player2      *ebiten.Image
+	ball1        *ebiten.Image
+	ball2        *ebiten.Image
+	health       *ebiten.Image
+	obstacle     *ebiten.Image
+	background   *ebiten.Image
+	screen       *ebiten.Image
+	data         GameData
+	times        []time.Time
+	filledSquare *ebiten.Image
 }
 
 func loadImage(str string) *ebiten.Image {

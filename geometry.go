@@ -1,6 +1,7 @@
 package bakoko
 
 import (
+	"image/color"
 	"math"
 	. "playful-patterns.com/bakoko/ints"
 )
@@ -18,6 +19,12 @@ type Circle struct {
 type Square struct {
 	Center Pt
 	Size   Int
+}
+
+type DebugPoint struct {
+	Pos  Pt
+	Size Int
+	Col  color.RGBA
 }
 
 func LineVerticalLineIntersection(l, vert Line) (bool, Pt) {
@@ -260,7 +267,7 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	// final form that we need to compute. These won't be covered here.
 	// Below are the canonical final formulas:
 	// d = line.End - line.start (direction vector of ray, from start to end)
-	// f = line.Start - circle.Center (vector from center sphere to ray start)
+	// f = line.Start - circle.Pos (vector from center sphere to ray start)
 	// t^2 * ( d · d ) + 2*t*( f · d ) + ( f · f - r^2 ) = 0
 	// where f · d is the dot product between the f and d vectors.
 	// The solution to this quadratic equation:
@@ -310,7 +317,7 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 	// Again, it's not worth noting here all the moving around that I did for
 	// the equations, I did them on a piece of paper. The conclusions are:
 	// d = line.End - line.start (direction vector of ray, from start to end)
-	// f = line.Start - circle.Center (vector from center sphere to ray start)
+	// f = line.Start - circle.Pos (vector from center sphere to ray start)
 	// a = (d · d) 					// 2-factor number
 	// b = 2 * f · d				// 2-factor number
 	// c = f · f - r^2				// 2-factor number
@@ -360,7 +367,7 @@ func LineCircleIntersection3Factors(line Line, circle Circle) (bool, Pt) {
 		// no collision since there is no travel
 		return false, Pt{}
 	}
-	// f = line.Start - circle.Center (vector from center sphere to ray start)
+	// f = line.Start - circle.Pos (vector from center sphere to ray start)
 	f := circle.Center.To(line.Start)
 	// a = (d · d) 				// 2-factor number
 	a := d.Dot(d)

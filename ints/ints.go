@@ -105,6 +105,10 @@ type Int struct {
 	Val int64
 }
 
+var ZERO = I(0)
+var ONE = I(1)
+var TWO = I(2)
+
 func I(val int64) Int {
 	return Int{val}
 }

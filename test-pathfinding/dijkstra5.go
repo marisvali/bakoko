@@ -7,7 +7,7 @@ import (
 	"slices"
 )
 
-type Pathfinding struct {
+type PathfindingTest struct {
 	neighbors []int
 	visited   []bool
 	parents   []int
@@ -16,7 +16,7 @@ type Pathfinding struct {
 	m         Matrix
 }
 
-func (p *Pathfinding) Initialize(m Matrix) {
+func (p *PathfindingTest) Initialize(m Matrix) {
 	// Keep reference to Matrix in order to transform Pts to ints and ints to
 	// Pts in the FindPath method.
 	p.m = m
@@ -64,7 +64,7 @@ func (p *Pathfinding) Initialize(m Matrix) {
 	p.parents = make([]int, len(p.neighbors)/p.nDirs)
 }
 
-func (p *Pathfinding) computePath(parents []int, end int) (path []Pt) {
+func (p *PathfindingTest) computePath(parents []int, end int) (path []Pt) {
 	node := end
 	for node >= 0 {
 		path = append(path, p.m.IndexToPt(I(int64(node))))
@@ -74,7 +74,7 @@ func (p *Pathfinding) computePath(parents []int, end int) (path []Pt) {
 	return
 }
 
-func (p *Pathfinding) FindPath(startPt, endPt Pt) []Pt {
+func (p *PathfindingTest) FindPath(startPt, endPt Pt) []Pt {
 	// Convert Pts to ints.
 	start := p.m.PtToIndex(startPt).ToInt()
 	end := p.m.PtToIndex(endPt).ToInt()
@@ -119,7 +119,7 @@ func dijkstra5(m Matrix, pairs []StartEnd) (paths [][]Pt) {
 	pathLens := 0
 	var path []Pt
 
-	var pathfinding Pathfinding
+	var pathfinding PathfindingTest
 	pathfinding.Initialize(m)
 
 	duration := Duration(func() {
