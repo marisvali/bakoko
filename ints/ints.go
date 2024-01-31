@@ -33,7 +33,7 @@ Checking for overflow makes int operations 3 to 6.5 times slower.
 Benchmarked on an Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz, 2208 Mhz.
 
 The concrete problem that started this package:
-I want to have games where all the world is simulated using only integers. This
+I want to have games where all the world-main is simulated using only integers. This
 means all operations need to be done on integers only. This ensures that my game
 will be deterministic and act exactly the same on all processors. This means
 recording a playthrough is cheap. I only need the input from the player, which
@@ -45,7 +45,7 @@ Advantages of deterministic simulations:
 my machine, so I can recreate a bug and debug it.
 - I can refactor my simulation code easily. I need to create some playthroughs
 stored as a sequence of inputs, Then I run the playthroughs quickly without any
-interface and check that the state of the world at the end is the same before
+interface and check that the state of the world-main at the end is the same before
 and after any refactoring work.
 - I can have automated tests to protect against previous bugs.
 - I can develop AI algorithms that play the game and have them play many games
@@ -66,7 +66,7 @@ playthrough, which would be nice for debugging or understanding things.
 - I can only analyze the video visually and manually, I can't run algorithms to
 extract metrics from it.
 
-Alternative 2: record world state. Either at each frame or every X frames.
+Alternative 2: record world-main state. Either at each frame or every X frames.
 Pros:
 - Much cheaper than video.
 - Less information but more precise.

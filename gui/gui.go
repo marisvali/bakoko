@@ -14,8 +14,8 @@ import (
 	"math"
 	"net"
 	"os"
-	. "playful-patterns.com/bakoko"
 	. "playful-patterns.com/bakoko/ints"
+	. "playful-patterns.com/bakoko/world"
 	"slices"
 	"time"
 )
@@ -119,7 +119,7 @@ func (g *Game) Update() error {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		playerInput.Shoot = true
 		x, y := ebiten.CursorPosition()
-		// Translate from screen coordinates to in-world units.
+		// Translate from screen coordinates to in-world-main units.
 		playerInput.ShootPt.X = g.ScreenToWorld(x)
 		playerInput.ShootPt.Y = g.ScreenToWorld(y)
 	}
@@ -139,8 +139,8 @@ func (g *Game) Update() error {
 	//g.peer2.getWorld(&g.w) // redundant but clears the buffers
 	//input.SerializeToFile("input.bin")
 	//TouchFile("input-ready")
-	//WaitForFile("world-ready")
-	//g.w.DeserializeFromFile("world.bin")
+	//WaitForFile("world-main-ready")
+	//g.w.DeserializeFromFile("world-main.bin")
 	return nil
 }
 

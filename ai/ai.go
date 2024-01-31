@@ -6,8 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
-	. "playful-patterns.com/bakoko"
 	. "playful-patterns.com/bakoko/ints"
+	. "playful-patterns.com/bakoko/world"
 	"time"
 )
 
@@ -79,10 +79,10 @@ func PlayerIsAt(p *Player, pt Pt) bool {
 	return p.Bounds.Center.SquaredDistTo(pt).Lt(U(5).Sqr())
 }
 func (p *PlayerAI) Step(w *World) (input PlayerInput) {
-	// Check somehow if the world is initialized.
+	// Check somehow if the world-main is initialized.
 	if w.Obstacles.NRows().Leq(ZERO) {
-		// If there's no world matrix, we can probably safely assume
-		// the world is not initialized.
+		// If there's no world-main matrix, we can probably safely assume
+		// the world-main is not initialized.
 		return
 	}
 
@@ -130,7 +130,7 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		var pathfinding Pathfinding
 		pathfinding.Initialize(mw)
 		path := pathfinding.FindPath(startPt, endPt)
-		// Transform path coordinates into world coordinates.
+		// Transform path coordinates into world-main coordinates.
 		var pathWorld []Pt
 		for _, pt := range path {
 			pathWorld = append(pathWorld, pt.Times(sizeW))
