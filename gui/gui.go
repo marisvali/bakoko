@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -10,11 +9,10 @@ import (
 	"image"
 	"image/color"
 	"io"
-	"log"
 	"math"
-	"net"
 	"os"
 	. "playful-patterns.com/bakoko/ints"
+	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
 	"slices"
 	"time"
@@ -32,65 +30,6 @@ func colorHex(hexVal int) color.Color {
 		G: g,
 		B: b,
 		A: 255,
-	}
-}
-
-type simulationPeer struct {
-	endpoint string
-	conn     net.Conn
-}
-
-// Doesn't matter if this fails.
-func (p *simulationPeer) getWorld(w *World) {
-	// Don't do anything if we don't have a peer.
-	// The communication between us and the peer is always that:
-	// - we connect to the peer
-	// - we send input to the peer
-	// - we get an ouput from the peer
-	// If the peer disconnects in middle of that, we start from the beginning,
-	// we don't accept a connection then continue with getting the output.
-	if p.conn == nil {
-		return
-	}
-
-	data, err := ReadData(p.conn)
-	// If there was an error, assume the peer is no longer available.
-	// Invalidate the connection and try again later.
-	if err != nil {
-		p.conn = nil
-		log.Println("lost connection")
-		return
-	}
-
-	w.Deserialize(bytes.NewBuffer(data))
-}
-
-// Try to send an input to the peer, but don't block.
-func (p *simulationPeer) sendInput(input *PlayerInput) {
-	// If we don't have a peer, connect to one.
-	if p.conn == nil {
-		var err error
-		p.conn, err = net.DialTimeout("tcp", p.endpoint, 5*time.Millisecond)
-
-		// If connection took too long or failed, screw it.
-		// We'll try again later.
-		if err != nil {
-			//log.Println("could not connect!")
-			return
-		}
-	}
-	//log.Println("connection established!")
-
-	// We have a connection, try to send our input.
-	buf := new(bytes.Buffer)
-	Serialize(buf, input)
-
-	err := WriteData(p.conn, buf.Bytes())
-	// If there was an error, assume the peer is no longer available.
-	// Invalidate the connection and try again later.
-	if err != nil {
-		p.conn = nil
-		log.Println("lost connection")
 	}
 }
 
@@ -126,16 +65,16 @@ func (g *Game) Update() error {
 
 	//g.w.Step(&input)
 	if slices.Contains(pressedKeys, ebiten.KeyShift) {
-		g.peer.sendInput(&PlayerInput{})
+		g.peer.SendInput(&PlayerInput{})
 		//g.peer2.sendInput(&playerInput)
 	} else {
-		g.peer.sendInput(&playerInput)
+		g.peer.SendInput(&playerInput)
 		//g.peer2.sendInput(&PlayerInput{})
 	}
 
 	//var w World
 	//g.peer.getWorld(&w)
-	g.peer.getWorld(&g.w)
+	g.peer.GetWorld(&g.w)
 	//g.peer2.getWorld(&g.w) // redundant but clears the buffers
 	//input.SerializeToFile("input.bin")
 	//TouchFile("input-ready")
@@ -345,7 +284,7 @@ type GameData struct {
 
 type Game struct {
 	w    World
-	peer simulationPeer
+	peer SimulationPeer
 	//peer2        simulationPeer
 	player1      *ebiten.Image
 	player2      *ebiten.Image
@@ -430,7 +369,7 @@ func (g *Game) loadGameData() {
 
 func main() {
 	var g Game
-	g.peer.endpoint = os.Args[1] // localhost:56901 or localhost:56902
+	g.peer.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
 	//g.peer2.endpoint = "localhost:56902"
 	g.loadGameData()
 

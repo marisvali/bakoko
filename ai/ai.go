@@ -1,74 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"image/color"
-	"log"
-	"net"
 	"os"
 	. "playful-patterns.com/bakoko/ints"
+	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
-	"time"
 )
-
-type simulationPeer struct {
-	endpoint string
-	conn     net.Conn
-}
-
-// Doesn't matter if this fails.
-func (p *simulationPeer) getWorld(w *World) {
-	// Don't do anything if we don't have a peer.
-	// The communication between us and the peer is always that:
-	// - we connect to the peer
-	// - we send input to the peer
-	// - we get an ouput from the peer
-	// If the peer disconnects in middle of that, we start from the beginning,
-	// we don't accept a connection then continue with getting the output.
-	if p.conn == nil {
-		return
-	}
-
-	data, err := ReadData(p.conn)
-	// If there was an error, assume the peer is no longer available.
-	// Invalidate the connection and try again later.
-	if err != nil {
-		p.conn = nil
-		log.Println("lost connection")
-		return
-	}
-
-	w.Deserialize(bytes.NewBuffer(data))
-}
-
-// Try to send an input to the peer, but don't block.
-func (p *simulationPeer) sendInput(input *PlayerInput) {
-	// If we don't have a peer, connect to one.
-	if p.conn == nil {
-		var err error
-		p.conn, err = net.DialTimeout("tcp", p.endpoint, 5*time.Millisecond)
-
-		// If connection took too long or failed, screw it.
-		// We'll try again later.
-		if err != nil {
-			//log.Println("could not connect!")
-			return
-		}
-	}
-	//log.Println("connection established!")
-
-	// We have a connection, try to send our input.
-	buf := new(bytes.Buffer)
-	Serialize(buf, input)
-
-	err := WriteData(p.conn, buf.Bytes())
-	// If there was an error, assume the peer is no longer available.
-	// Invalidate the connection and try again later.
-	if err != nil {
-		p.conn = nil
-		log.Println("lost connection")
-	}
-}
 
 type PlayerAI struct {
 	TargetPt  Pt
@@ -169,15 +107,15 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 }
 
 func main() {
-	var peer simulationPeer
+	var peer SimulationPeer
 	var w World
 	var ai PlayerAI
 
-	peer.endpoint = os.Args[1] // localhost:56901 or localhost:56902
+	peer.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
 
 	for {
 		input := ai.Step(&w)
-		peer.sendInput(&input)
-		peer.getWorld(&w)
+		peer.SendInput(&input)
+		peer.GetWorld(&w)
 	}
 }
