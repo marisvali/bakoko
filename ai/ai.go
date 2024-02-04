@@ -10,10 +10,12 @@ import (
 )
 
 type PlayerAI struct {
-	TargetPt  Pt
-	HasTarget bool
-	GuiProxy  GuiProxy
-	DebugInfo DebugInfo
+	TargetPt          Pt
+	HasTarget         bool
+	GuiProxy          GuiProxy
+	DebugInfo         DebugInfo
+	PauseBetweenShots time.Duration
+	LastShot          time.Time
 }
 
 func PlayerIsAt(p *Player, pt Pt) bool {
@@ -30,8 +32,20 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 
 	// TODO: find a more generic way of selecting which player is which.
 	player := &w.Player2
-	finalTarget := w.Player1.Bounds.Center
 
+	if time.Now().Sub(p.LastShot) > p.PauseBetweenShots {
+		ballStart := player.Bounds.Center
+		ballEnd := w.Player1.Bounds.Center
+		if pathIsClear(w.Obstacles, w.ObstacleSize, ballStart, ballEnd, U(50)) {
+			input.Shoot = true
+			input.ShootPt = ballEnd
+			p.LastShot = time.Now()
+		}
+	}
+
+	//return
+
+	finalTarget := w.Player1.Bounds.Center
 	if p.HasTarget {
 		// If we're at the target, disable the target which signals we need
 		// a new path.
@@ -104,10 +118,22 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 	}
 
 	if p.HasTarget {
+		oldInput := input
 		input = MoveStraightLine(player.Bounds.Center, p.TargetPt)
+		input.Shoot = oldInput.Shoot
+		input.ShootPt = oldInput.ShootPt
 	}
 
 	return
+}
+
+func pathIsClear(obstacles Matrix, obstacleSize Int, start Pt, end Pt, ballSize Int) bool {
+	squares := obstaclesToSquares(obstacles, obstacleSize)
+	// Check if we can travel to newPos without collision.
+	// CircleSquareCollision doesn't return oldPos as a collision point.
+	intersects, _, _ :=
+		CircleSquaresCollision(start, end, ballSize, squares)
+	return !intersects
 }
 
 func main() {
@@ -115,6 +141,8 @@ func main() {
 	var guiProxy GuiProxy
 	var w World
 	var ai PlayerAI
+	ai.PauseBetweenShots = 500 * time.Millisecond
+	ai.LastShot = time.Now()
 
 	worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
 	worldProxy.Timeout = 0 * time.Millisecond
@@ -142,6 +170,21 @@ func main() {
 		}
 
 		// This may or may not block, who cares?
-		guiProxy.SendPaintData(&ai.DebugInfo)
+		//guiProxy.SendPaintData(&ai.DebugInfo)
 	}
+}
+
+func obstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
+	for row := I(0); row.Lt(obstacles.NRows()); row.Inc() {
+		for col := I(0); col.Lt(obstacles.NCols()); col.Inc() {
+			if obstacles.Get(row, col).Neq(I(0)) {
+				half := obstacleSize.DivBy(I(2))
+				squares = append(squares, Square{
+					Center: Pt{col.Times(obstacleSize).Plus(half), row.Times(obstacleSize).Plus(half)},
+					Size:   obstacleSize,
+				})
+			}
+		}
+	}
+	return
 }

@@ -177,7 +177,8 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
 		Type:           player.BallType,
 	}
 	*balls = append(*balls, ball)
-	player.NBalls.Dec()
+	// Infinite balls, for debugging purposes.
+	//player.NBalls.Dec()
 }
 
 func ShootBallDebug(balls *[]Ball, orig, dest Pt, speed Int) {
@@ -386,14 +387,16 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 		if FriendlyBall(*player, ball) {
 			if ball.CanBeCollected {
 				toBeDeleted[idx] = true
-				player.NBalls.Inc()
+				// Disable this for debugging purposes.
+				// player.NBalls.Inc()
 			}
 		} else {
 			if player.Health.Gt(I(0)) {
 				player.Health.Dec()
 			}
 			toBeDeleted[idx] = true
-			player.NBalls.Inc()
+			// Disable this for debugging purposes.
+			//player.NBalls.Inc()
 		}
 	}
 

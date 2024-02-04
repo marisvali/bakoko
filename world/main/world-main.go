@@ -9,8 +9,8 @@ import (
 var w World
 
 func setupWorld() {
-	w.BallSpeed = CU(1200)
-	w.BallDec = CU(20)
+	w.BallSpeed = CU(300)
+	w.BallDec = CU(2)
 	w.Player1 = Player{
 		Bounds: Circle{
 			Center:   UPt(320, 170),
