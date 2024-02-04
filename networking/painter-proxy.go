@@ -6,12 +6,21 @@ import (
 	. "playful-patterns.com/bakoko/world"
 )
 
-type InterfacePeer struct {
+// This is an object that represents an entity that wants to send some
+// graphics to be displayed (a painter).
+// If someone wants to talk to the painter, they talk to this object
+// and this object passes on information to the painter.
+// The communication with the painter so far is this:
+// - give me what you want to paint
+// This is meant to be used by the gui which draws graphics sent by the world
+// and the AI.
+// This is a server that waits for a painter to connect to it.
+type PainterProxy struct {
 	Endpoint string
 	conn     net.Conn
 }
 
-func (p *InterfacePeer) GetInput() PlayerInput {
+func (p *PainterProxy) GetPaintData() (info DebugInfo) {
 	// Keep trying to get an input from a peer.
 	for {
 		// If we don't have a peer, wait until we get one.
@@ -38,29 +47,7 @@ func (p *InterfacePeer) GetInput() PlayerInput {
 		}
 
 		// Finally, we can return the input.
-		var input PlayerInput
-		Deserialize(bytes.NewBuffer(data), &input)
-		return input
-	}
-}
-
-// Doesn't matter if this fails.
-func (p *InterfacePeer) SendWorld(w *World) {
-	// Don't do anything if we don't have a peer.
-	// The communication between us and the peer is always that:
-	// - the peer connects
-	// - we get input from the peer
-	// - we send an ouput to the peer
-	// If the peer disconnects in middle of that, we start from the beginning,
-	// we don't accept a connection then continue with sending the output.
-	if p.conn == nil {
+		info.Deserialize(bytes.NewBuffer(data))
 		return
-	}
-
-	data := w.Serialize()
-
-	err := WriteData(p.conn, data)
-	if err != nil {
-		p.conn = nil
 	}
 }

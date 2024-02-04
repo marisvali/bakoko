@@ -1,7 +1,6 @@
 package world
 
 import (
-	"image/color"
 	"math"
 	. "playful-patterns.com/bakoko/ints"
 )
@@ -19,12 +18,6 @@ type Circle struct {
 type Square struct {
 	Center Pt
 	Size   Int
-}
-
-type DebugPoint struct {
-	Pos  Pt
-	Size Int
-	Col  color.RGBA
 }
 
 func LineVerticalLineIntersection(l, vert Line) (bool, Pt) {
@@ -456,7 +449,7 @@ func CircleSquareIntersect(c Circle, s Square) bool {
 	return false
 }
 
-type DebugInfo struct {
+type AlgDebugInfo struct {
 	Points  []Pt
 	Lines   []Line
 	Circles []Circle
@@ -466,7 +459,7 @@ type DebugInfo struct {
 func CircleSquareCollision(circleOldPos Pt, circleNewPos Pt,
 	circleDiameter Int, s Square) (intersects bool,
 	circlePositionAtCollision Pt, collisionNormal Pt,
-	debugInfo DebugInfo) {
+	debugInfo AlgDebugInfo) {
 	// Get the line on which the circle is travelling.
 	// Consider the circle to be a point and grow the square using the Minkowski sum concept.
 	// Get 4 Circles (one in each corner) and 4 Lines.

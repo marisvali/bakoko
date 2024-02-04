@@ -15,6 +15,7 @@ import (
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -63,24 +64,27 @@ func (g *Game) Update() error {
 		playerInput.ShootPt.Y = g.ScreenToWorld(y)
 	}
 
-	//g.w.Step(&input)
-	if slices.Contains(pressedKeys, ebiten.KeyShift) {
-		g.peer.SendInput(&PlayerInput{})
-		//g.peer2.sendInput(&playerInput)
-	} else {
-		g.peer.SendInput(&playerInput)
-		//g.peer2.sendInput(&PlayerInput{})
+	g.SyncWithWorld(playerInput)
+	return nil
+}
+
+func (g *Game) SyncWithWorld(input PlayerInput) {
+	// Here I want to block but only if there's a connection.
+	// If a connection cannot be established, or the send or get fails, or
+	// there is a timeout, I want to go ahead.
+	// I will try to get the connection back at every update, but I don't want
+	// to permanently block my GUI if a connection cannot be established.
+	if err := g.worldProxy.Connect(); err != nil {
+		return // Nevermind, try again next frame.
 	}
 
-	//var w World
-	//g.peer.getWorld(&w)
-	g.peer.GetWorld(&g.w)
-	//g.peer2.getWorld(&g.w) // redundant but clears the buffers
-	//input.SerializeToFile("input.bin")
-	//TouchFile("input-ready")
-	//WaitForFile("world-main-ready")
-	//g.w.DeserializeFromFile("world-main.bin")
-	return nil
+	if err := g.worldProxy.SendInput(&input); err != nil {
+		return // Nevermind, try again next frame.
+	}
+
+	if err := g.worldProxy.GetWorld(&g.w); err != nil {
+		return // Nevermind, try again next frame.
+	}
 }
 
 //func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
@@ -245,13 +249,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.WorldToScreen(ball.Bounds.Diameter))
 	}
 
-	// debug squares
-	for _, p := range g.w.DebugPoints {
-		//xScreen := g.WorldToScreen(sq.Pos.X)
-		//yScreen := g.WorldToScreen(sq.Pos.Y)
-		//diameter := g.WorldToScreen(sq.Size)
-
-		g.DrawFilledSquare(screen, Square{p.Pos, p.Size}, p.Col)
+	// draw debug geometry
+	for i := range g.debugInfo {
+		info := g.GetDebugInfo(i)
+		for _, p := range info.Points {
+			g.DrawFilledSquare(screen, Square{p.Pos, p.Size}, p.Col)
+		}
 	}
 
 	//img1 := ebiten.NewImage(50, 50)
@@ -283,20 +286,22 @@ type GameData struct {
 }
 
 type Game struct {
-	w    World
-	peer SimulationPeer
-	//peer2        simulationPeer
-	player1      *ebiten.Image
-	player2      *ebiten.Image
-	ball1        *ebiten.Image
-	ball2        *ebiten.Image
-	health       *ebiten.Image
-	obstacle     *ebiten.Image
-	background   *ebiten.Image
-	screen       *ebiten.Image
-	data         GameData
-	times        []time.Time
-	filledSquare *ebiten.Image
+	w              World
+	worldProxy     WorldProxy
+	painters       []PainterProxy
+	player1        *ebiten.Image
+	player2        *ebiten.Image
+	ball1          *ebiten.Image
+	ball2          *ebiten.Image
+	health         *ebiten.Image
+	obstacle       *ebiten.Image
+	background     *ebiten.Image
+	screen         *ebiten.Image
+	data           GameData
+	times          []time.Time
+	filledSquare   *ebiten.Image
+	debugInfo      []DebugInfo
+	debugInfoMutex []sync.Mutex
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -367,12 +372,43 @@ func (g *Game) loadGameData() {
 	ebiten.SetWindowPosition(10, 1080-10-g.data.WindowHeight)
 }
 
+func (g *Game) SetDebugInfo(i int, info DebugInfo) {
+	g.debugInfoMutex[i].Lock()
+	g.debugInfo[i] = info.Clone() // Must to deep copy here.
+	g.debugInfoMutex[i].Unlock()
+}
+
+func (g *Game) GetDebugInfo(i int) DebugInfo {
+	g.debugInfoMutex[i].Lock()
+	info := g.debugInfo[i].Clone() // Must to deep copy here.
+	g.debugInfoMutex[i].Unlock()
+	return info
+}
+
+func (g *Game) UpdateDebugInfo(i int) {
+	for {
+		info := g.painters[i].GetPaintData() // Block.
+		g.SetDebugInfo(i, info)
+	}
+}
+
+func (g *Game) AddPainter(endpoint string) {
+	var p PainterProxy
+	p.Endpoint = endpoint
+	g.painters = append(g.painters, p)
+	g.debugInfo = append(g.debugInfo, DebugInfo{})
+	g.debugInfoMutex = append(g.debugInfoMutex, sync.Mutex{})
+	i := len(g.painters) - 1
+	go g.UpdateDebugInfo(i)
+}
+
 func main() {
 	var g Game
-	g.peer.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
-	//g.peer2.endpoint = "localhost:56902"
+	g.worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
+	g.worldProxy.Timeout = 50000 * time.Millisecond
+	g.AddPainter(os.Args[2])
+	g.AddPainter(os.Args[3])
 	g.loadGameData()
-
 	err := ebiten.RunGame(&g)
 	Check(err)
 }

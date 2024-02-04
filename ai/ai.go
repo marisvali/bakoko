@@ -6,16 +6,20 @@ import (
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
+	"time"
 )
 
 type PlayerAI struct {
 	TargetPt  Pt
 	HasTarget bool
+	GuiProxy  GuiProxy
+	DebugInfo DebugInfo
 }
 
 func PlayerIsAt(p *Player, pt Pt) bool {
 	return p.Bounds.Center.SquaredDistTo(pt).Lt(U(5).Sqr())
 }
+
 func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 	// Check somehow if the world-main is initialized.
 	if w.Obstacles.NRows().Leq(ZERO) {
@@ -44,7 +48,7 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		startPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, playerPos)
 		endPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, finalTarget)
 
-		w.DebugPoints = []DebugPoint{}
+		p.DebugInfo.Points = []DebugPoint{}
 		//w.Obs = []Square{
 		//	{Pt{U(100), U(100)}, U(10)},
 		//	{playerPos, U(10)},
@@ -61,7 +65,7 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 				} else {
 					pt.Col = color.RGBA{255, 0, 0, 255}
 				}
-				w.DebugPoints = append(w.DebugPoints, pt)
+				p.DebugInfo.Points = append(p.DebugInfo.Points, pt)
 			}
 		}
 
@@ -72,11 +76,11 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		var pathWorld []Pt
 		for _, pt := range path {
 			pathWorld = append(pathWorld, pt.Times(sizeW))
-			w.DebugPoints = append(w.DebugPoints, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
+			p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
 		}
 
-		w.DebugPoints = append(w.DebugPoints, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
-		w.DebugPoints = append(w.DebugPoints, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 123, 255, 255}})
+		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
+		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 123, 255, 255}})
 
 		if len(pathWorld) == 0 {
 			// Don't do anything.
@@ -107,15 +111,37 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 }
 
 func main() {
-	var peer SimulationPeer
+	var worldProxy WorldProxy
+	var guiProxy GuiProxy
 	var w World
 	var ai PlayerAI
 
-	peer.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
+	worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
+	worldProxy.Timeout = 0 * time.Millisecond
+	guiProxy.Endpoint = os.Args[2]
 
 	for {
 		input := ai.Step(&w)
-		peer.SendInput(&input)
-		peer.GetWorld(&w)
+
+		// This should block as the AI doesn't make sense if it doesn't
+		// synchronize with the simulation.
+		for {
+			if err := worldProxy.Connect(); err != nil {
+				continue // Retry from the beginning.
+			}
+
+			if err := worldProxy.SendInput(&input); err != nil {
+				continue // Retry from the beginning.
+			}
+
+			if err := worldProxy.GetWorld(&w); err != nil {
+				continue // Retry from the beginning.
+			}
+
+			break
+		}
+
+		// This may or may not block, who cares?
+		guiProxy.SendPaintData(&ai.DebugInfo)
 	}
 }

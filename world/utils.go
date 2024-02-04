@@ -1,6 +1,7 @@
 package world
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -84,6 +85,18 @@ func Serialize(w io.Writer, data any) {
 func Deserialize(r io.Reader, data any) {
 	err := binary.Read(r, binary.LittleEndian, data)
 	Check(err)
+}
+
+func SerializeSlice[T any](buf *bytes.Buffer, s []T) {
+	Serialize(buf, int64(len(s)))
+	Serialize(buf, s)
+}
+
+func DeserializeSlice[T any](buf *bytes.Buffer, s *[]T) {
+	var lenSlice int64
+	Deserialize(buf, &lenSlice)
+	*s = make([]T, lenSlice)
+	Deserialize(buf, *s)
 }
 
 type TimedFunction func()

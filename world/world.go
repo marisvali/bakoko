@@ -97,7 +97,7 @@ type World struct {
 	ObstacleSize Int
 	BallSpeed    Int
 	BallDec      Int
-	DebugPoints  []DebugPoint
+	DebugInfo    DebugInfo
 }
 
 type PlayerInput struct {
@@ -120,28 +120,18 @@ func (w *World) Serialize() []byte {
 	buf := new(bytes.Buffer)
 	Serialize(buf, w.Player1)
 	Serialize(buf, w.Player2)
-	Serialize(buf, I(int64(len(w.Balls))))
-	Serialize(buf, w.Balls)
+	SerializeSlice(buf, w.Balls)
 	w.Obstacles.Serialize(buf)
 	Serialize(buf, w.ObstacleSize)
-	Serialize(buf, I(int64(len(w.DebugPoints))))
-	Serialize(buf, w.DebugPoints)
 	return buf.Bytes()
 }
 
 func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &w.Player1)
 	Deserialize(buf, &w.Player2)
-	var lenBalls Int
-	Deserialize(buf, &lenBalls)
-	w.Balls = make([]Ball, lenBalls.ToInt64())
-	Deserialize(buf, w.Balls)
+	DeserializeSlice(buf, &w.Balls)
 	w.Obstacles.Deserialize(buf)
 	Deserialize(buf, &w.ObstacleSize)
-	var lenObs Int
-	Deserialize(buf, &lenObs)
-	w.DebugPoints = make([]DebugPoint, lenObs.ToInt64())
-	Deserialize(buf, w.DebugPoints)
 }
 
 func (w *World) SerializeToFile(filename string) {
@@ -204,23 +194,6 @@ func ShootBallDebug(balls *[]Ball, orig, dest Pt, speed Int) {
 		Type:           I(1),
 	}
 	*balls = append(*balls, ball)
-}
-
-func SerializeInputs(inputs []Input, filename string) {
-	buf := new(bytes.Buffer)
-	Serialize(buf, int64(len(inputs)))
-	Serialize(buf, inputs)
-	WriteFile(filename, buf.Bytes())
-}
-
-func DeserializeInputs(filename string) []Input {
-	var inputs []Input
-	buf := bytes.NewBuffer(ReadFile(filename))
-	var lenInputs Int
-	Deserialize(buf, &lenInputs)
-	inputs = make([]Input, lenInputs.ToInt64())
-	Deserialize(buf, inputs)
-	return inputs
 }
 
 // Compute the new position of a circle travelling from its current position
