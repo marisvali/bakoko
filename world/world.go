@@ -301,22 +301,51 @@ func MoveStraightLine(start, end Pt) (input PlayerInput) {
 func GetMatrixPointClosestToWorld(m Matrix, size Int, offset Pt, pos Pt) Pt {
 	pos2 := pos.Minus(offset)
 	// Get point by doing integer division (rounding down).
-	tentative := pos2.DivBy(size)
+	first := pos2.DivBy(size)
 
-	// Round up if we are closer to the higher number than the lower number.
-	if pos2.X.Mod(size).Gt(size.DivBy(I(2))) {
-		tentative.X.Inc()
+	// The point in the world is surrounded by 4 points in the matrix.
+	options := []Pt{
+		first,
+		{first.X.Plus(ONE), first.Y},
+		{first.X, first.Y.Plus(ONE)},
+		{first.X.Plus(ONE), first.Y.Plus(ONE)},
 	}
-	if pos2.Y.Mod(size).Gt(size.DivBy(I(2))) {
-		tentative.Y.Inc()
+
+	// Transform these options back into world points.
+	optionsWorld := make([]Pt, 4)
+	for i, pt := range options {
+		worldPt := pt.Times(size).Plus(offset)
+		optionsWorld[i] = worldPt
 	}
-	return tentative
-	// Convert back to world-main coordinates.
-	//worldTentative := Pt{
-	//	tentative.X.Times(size).Plus(offset.X),
-	//	tentative.Y.Times(size).Plus(offset.Y),
-	//}
-	//return worldTentative
+
+	// Find the distances between each of the 4 points and the target point.
+	distances := make([]Int, 4)
+	for i, pt := range optionsWorld {
+		distances[i] = pt.SquaredDistTo(pos)
+	}
+
+	// I don't want to spend time learning how to do a proper sorting here.
+	// So, do it the brute-force way.
+	for {
+		// Get the smallest distance that's still valid.
+		minIdx := -1
+		for i := range distances {
+			if distances[i].Gt(ZERO) && (minIdx < 0 || distances[i].Lt(distances[minIdx])) {
+				minIdx = i
+			}
+		}
+		// No more distances available. It means all points are disabled
+		// on the matrix. Just return the first one.
+		if minIdx == -1 {
+			return options[0]
+		}
+
+		if m.Get(options[minIdx].Y, options[minIdx].X).Eq(ZERO) {
+			return options[minIdx]
+		} else {
+			distances[minIdx] = I(-1)
+		}
+	}
 }
 
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,

@@ -9,12 +9,12 @@
   "Player1BallType": 1,
   "Player1Diameter": 5000,
   "Player2X": 13000,
-  "Player2Y": 14000,
+  "Player2Y": 12000,
   "Player2Speed": 100,
   "Player2Health": 3,
   "Player2NBalls": 3,
   "Player2BallType": 2,
   "Player2Diameter": 5000,
   "ObstacleSize": 4000,
-  "Level": "world-data/level1.txt"
+  "Level": "world-data/level2.txt"
 }

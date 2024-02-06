@@ -94,7 +94,7 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		}
 
 		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
-		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 123, 255, 255}})
+		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{0, 0, 0, 255}})
 
 		if len(pathWorld) == 0 {
 			// Don't do anything.
@@ -170,7 +170,7 @@ func main() {
 		}
 
 		// This may or may not block, who cares?
-		//guiProxy.SendPaintData(&ai.DebugInfo)
+		guiProxy.SendPaintData(&ai.DebugInfo)
 	}
 }
 
