@@ -8,7 +8,7 @@ type Pt struct {
 	X, Y Int
 }
 
-func IPt(x, y int64) Pt {
+func IPt(x, y int) Pt {
 	return Pt{I(x), I(y)}
 }
 

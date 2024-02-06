@@ -54,14 +54,14 @@ func Milliunits(numMilliunits Int) Int {
 	return numMilliunits.Times(I(Unit / 1000))
 }
 
-func U(numUnits int64) Int {
+func U(numUnits int) Int {
 	return I(numUnits).Times(I(Unit))
 }
 
-func UPt(xUnits int64, yUnits int64) Pt {
+func UPt(xUnits int, yUnits int) Pt {
 	return Pt{I(xUnits).Times(I(Unit)), I(yUnits).Times(I(Unit))}
 }
 
-func CU(numUnits int64) Int {
+func CU(numUnits int) Int {
 	return I(numUnits).Times(I(Unit)).DivBy(I(100))
 }

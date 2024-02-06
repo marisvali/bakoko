@@ -3,7 +3,7 @@ package world
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
+	"encoding/json"
 	"io"
 	"os"
 	"time"
@@ -21,61 +21,61 @@ func Check(e error) {
 	}
 }
 
-func WriteFile(name string, data []byte) {
-	name = "e:/" + name
-	err := os.WriteFile(name, data, 0644)
-	Check(err)
-}
-
-func ReadFile(name string) []byte {
-	name = "e:/" + name
-	data, err := os.ReadFile(name)
-	Check(err)
-	return data
-}
-
-func TouchFile(name string) {
-	name = "e:/" + name
-	file, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0644)
-	Check(err)
-	err = file.Close()
-	Check(err)
-}
-
-func FileExists(name string) bool {
-	name = "e:/" + name
-	if _, err := os.Stat(name); err == nil {
-		return true
-	}
-	return false
-}
-
-func WaitForFile(name string) {
-	name = "e:/" + name
-	for {
-		if _, err := os.Stat(name); err == nil {
-			for {
-				// Attempt to remove the file until the attempt succeeds.
-				err = os.Remove(name)
-				if err == nil {
-					return
-				}
-			}
-		} else if errors.Is(err, os.ErrNotExist) {
-			// name does not exist
-		} else {
-			Check(err)
-		}
-	}
-}
-
-func DeleteFile(name string) {
-	name = "e:/" + name
-	err := os.Remove(name)
-	if !errors.Is(err, os.ErrNotExist) {
-		Check(err)
-	}
-}
+//func WriteFile(name string, data []byte) {
+//	name = "e:/" + name
+//	err := os.WriteFile(name, data, 0644)
+//	Check(err)
+//}
+//
+//func ReadFile(name string) []byte {
+//	name = "e:/" + name
+//	data, err := os.ReadFile(name)
+//	Check(err)
+//	return data
+//}
+//
+//func TouchFile(name string) {
+//	name = "e:/" + name
+//	file, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0644)
+//	Check(err)
+//	err = file.Close()
+//	Check(err)
+//}
+//
+//func FileExists(name string) bool {
+//	name = "e:/" + name
+//	if _, err := os.Stat(name); err == nil {
+//		return true
+//	}
+//	return false
+//}
+//
+//func WaitForFile(name string) {
+//	name = "e:/" + name
+//	for {
+//		if _, err := os.Stat(name); err == nil {
+//			for {
+//				// Attempt to remove the file until the attempt succeeds.
+//				err = os.Remove(name)
+//				if err == nil {
+//					return
+//				}
+//			}
+//		} else if errors.Is(err, os.ErrNotExist) {
+//			// name does not exist
+//		} else {
+//			Check(err)
+//		}
+//	}
+//}
+//
+//func DeleteFile(name string) {
+//	name = "e:/" + name
+//	err := os.Remove(name)
+//	if !errors.Is(err, os.ErrNotExist) {
+//		Check(err)
+//	}
+//}
 
 func Serialize(w io.Writer, data any) {
 	err := binary.Write(w, binary.LittleEndian, data)
@@ -105,4 +105,44 @@ func Duration(function TimedFunction) float64 {
 	start := time.Now()
 	function()
 	return time.Since(start).Seconds()
+}
+
+func ReadAllText(filename string) string {
+	file, err := os.Open(filename)
+	Check(err)
+	bytes, err := io.ReadAll(file)
+	Check(err)
+	return string(bytes)
+}
+
+func LoadJSON(filename string, v any) {
+	file, err := os.Open(filename)
+	Check(err)
+	bytes, err := io.ReadAll(file)
+	Check(err)
+	err = json.Unmarshal(bytes, v)
+	Check(err)
+}
+
+type FolderWatcher struct {
+	Folder string
+	times  []time.Time
+}
+
+func (f *FolderWatcher) FolderContentsChanged() bool {
+	files, err := os.ReadDir(f.Folder)
+	Check(err)
+	if len(files) != len(f.times) {
+		f.times = make([]time.Time, len(files))
+	}
+	changed := false
+	for idx, file := range files {
+		info, err := file.Info()
+		Check(err)
+		if f.times[idx] != info.ModTime() {
+			changed = true
+			f.times[idx] = info.ModTime()
+		}
+	}
+	return changed
 }

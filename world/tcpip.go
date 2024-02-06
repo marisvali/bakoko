@@ -33,8 +33,8 @@ func ReadData(conn net.Conn) ([]byte, error) {
 		}
 
 		// Check if we got the expected number of bytes or not.
-		if I(int64(len(fullMessage))).Geq(expectedLen) {
-			return fullMessage[8:], nil // Skip the length from the data.
+		if I(len(fullMessage)).Geq(expectedLen) {
+			return fullMessage[8:], nil // Skip the length from the gui-data.
 		}
 	}
 }

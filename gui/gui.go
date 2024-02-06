@@ -1,14 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"image"
 	"image/color"
-	"io"
 	"math"
 	"os"
 	. "playful-patterns.com/bakoko/ints"
@@ -51,8 +49,8 @@ func (g *Game) Update() error {
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 	playerInput.Reload = slices.Contains(justPressedKeys, ebiten.KeyR)
 
-	if g.gameDataChangedOnDisk() {
-		g.loadGameData()
+	if g.folderWatcher.FolderContentsChanged() {
+		g.loadGuiData()
 	}
 
 	// Get mouse input.
@@ -98,7 +96,7 @@ func (g *Game) WorldToScreen(val Int) float64 {
 }
 
 func (g *Game) ScreenToWorld(val int) Int {
-	return U(int64(float64(val) / g.data.ScaleFactor))
+	return U(int(float64(val) / g.data.ScaleFactor))
 }
 
 func (g *Game) DrawSprite(img *ebiten.Image,
@@ -275,7 +273,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func init() {
 }
 
-type GameData struct {
+type GuiData struct {
 	ScaleFactor       float64
 	WindowWidth       int
 	WindowHeight      int
@@ -297,11 +295,12 @@ type Game struct {
 	obstacle       *ebiten.Image
 	background     *ebiten.Image
 	screen         *ebiten.Image
-	data           GameData
+	data           GuiData
 	times          []time.Time
 	filledSquare   *ebiten.Image
 	debugInfo      []DebugInfo
 	debugInfoMutex []sync.Mutex
+	folderWatcher  FolderWatcher
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -318,34 +317,34 @@ func loadImage(str string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-func loadJSON(filename string, v any) {
-	file, err := os.Open(filename)
-	Check(err)
-	bytes, err := io.ReadAll(file)
-	Check(err)
-	err = json.Unmarshal(bytes, v)
-	Check(err)
-}
+//func loadJSON(filename string, v any) {
+//	file, err := os.Open(filename)
+//	Check(err)
+//	bytes, err := io.ReadAll(file)
+//	Check(err)
+//	err = json.Unmarshal(bytes, v)
+//	Check(err)
+//}
+//
+//func (g *Game) gameDataChangedOnDisk() bool {
+//	files, err := os.ReadDir("gui-data")
+//	Check(err)
+//	if len(files) != len(g.times) {
+//		g.times = make([]time.Time, len(files))
+//	}
+//	changed := false
+//	for idx, file := range files {
+//		info, err := file.Info()
+//		Check(err)
+//		if g.times[idx] != info.ModTime() {
+//			changed = true
+//			g.times[idx] = info.ModTime()
+//		}
+//	}
+//	return changed
+//}
 
-func (g *Game) gameDataChangedOnDisk() bool {
-	files, err := os.ReadDir("data")
-	Check(err)
-	if len(files) != len(g.times) {
-		g.times = make([]time.Time, len(files))
-	}
-	changed := false
-	for idx, file := range files {
-		info, err := file.Info()
-		Check(err)
-		if g.times[idx] != info.ModTime() {
-			changed = true
-			g.times[idx] = info.ModTime()
-		}
-	}
-	return changed
-}
-
-func (g *Game) loadGameData() {
+func (g *Game) loadGuiData() {
 	// Read from the disk over and over until a full read is possible.
 	// This repetition is meant to avoid crashes due to reading files
 	// while they are still being written.
@@ -353,14 +352,14 @@ func (g *Game) loadGameData() {
 	CheckCrashes = false
 	for {
 		CheckFailed = nil
-		g.ball1 = loadImage("data/ball1.png")
-		g.ball2 = loadImage("data/ball2.png")
-		g.player1 = loadImage("data/player1.png")
-		g.player2 = loadImage("data/player2.png")
-		g.health = loadImage("data/health.png")
-		g.obstacle = loadImage("data/obstacle.png")
-		g.background = loadImage("data/background.png")
-		loadJSON("data/gui.json", &g.data)
+		g.ball1 = loadImage("gui-data/ball1.png")
+		g.ball2 = loadImage("gui-data/ball2.png")
+		g.player1 = loadImage("gui-data/player1.png")
+		g.player2 = loadImage("gui-data/player2.png")
+		g.health = loadImage("gui-data/health.png")
+		g.obstacle = loadImage("gui-data/obstacle.png")
+		g.background = loadImage("gui-data/background.png")
+		LoadJSON("gui-data/gui.json", &g.data)
 		if CheckFailed == nil {
 			break
 		}
@@ -404,11 +403,12 @@ func (g *Game) AddPainter(endpoint string) {
 
 func main() {
 	var g Game
+	g.folderWatcher.Folder = "gui-data"
 	g.worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
 	g.worldProxy.Timeout = 50000 * time.Millisecond
 	g.AddPainter(os.Args[2])
 	g.AddPainter(os.Args[3])
-	g.loadGameData()
+	g.loadGuiData()
 	err := ebiten.RunGame(&g)
 	Check(err)
 }

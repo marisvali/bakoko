@@ -115,7 +115,7 @@ xxxxxxxxxxxxx
 		col++
 	}
 	//m.Init(I(int64(row+1)), I(int64(maxCol/3+1)))
-	m.Init(I(int64(row)), I(int64(maxCol)))
+	m.Init(I(row), I(maxCol))
 
 	row = -1
 	col = 0
@@ -128,7 +128,7 @@ xxxxxxxxxxxxx
 			row++
 			continue
 		} else if c == 'x' {
-			m.Set(I(int64(row)), I(int64(col)), I(1))
+			m.Set(I(row), I(col), I(1))
 		}
 		col++
 	}
@@ -147,5 +147,64 @@ xxxxxxxxxxxxx
 	//	col++
 	//}
 
+	return
+}
+
+func LevelFromString(level string) (m Matrix) {
+	// This is the kind of string that can get turned into a level.
+	//	level = `
+	//xxxxxxxxxxxxx
+	//x           x
+	//x  x     x  x
+	//x           x
+	//x           x
+	//x    x  x   x
+	//x           x
+	//x           x
+	//x           x
+	//x         xxx
+	//x           x
+	//x           x
+	//x           x
+	//x           x
+	//xxxxxxxxxxxxx
+	//	`
+
+	row := 0
+	col := 0
+	maxCol := 0
+	for i := 0; i < len(level); i++ {
+		c := level[i]
+		if c == '`' {
+			continue
+		} else if c == '\n' {
+			maxCol = col
+			col = 0
+			row++
+			continue
+		}
+		col++
+	}
+	// If the string does not end with an empty line, count the last row.
+	if col > 0 {
+		row++
+	}
+	m.Init(I(row), I(maxCol))
+
+	row = 0
+	col = 0
+	for i := 0; i < len(level); i++ {
+		c := level[i]
+		if c == '`' {
+			continue
+		} else if c == '\n' {
+			col = 0
+			row++
+			continue
+		} else if c == 'x' {
+			m.Set(I(row), I(col), I(1))
+		}
+		col++
+	}
 	return
 }

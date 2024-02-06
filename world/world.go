@@ -134,28 +134,6 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &w.ObstacleSize)
 }
 
-func (w *World) SerializeToFile(filename string) {
-	data := w.Serialize()
-	WriteFile(filename, data)
-}
-
-func (w *World) DeserializeFromFile(filename string) {
-	buf := bytes.NewBuffer(ReadFile(filename))
-	w.Deserialize(buf)
-}
-
-func (i *Input) SerializeToFile(filename string) {
-	buf := new(bytes.Buffer)
-	Serialize(buf, i)
-	WriteFile(filename, buf.Bytes())
-}
-
-func (i *Input) DeserializeFromFile(filename string) {
-	data := ReadFile(filename)
-	buf := bytes.NewBuffer(data)
-	Deserialize(buf, i)
-}
-
 func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
 	if player.NBalls.Leq(I(0)) {
 		return

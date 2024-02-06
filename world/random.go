@@ -27,6 +27,6 @@ func RInt(min Int, max Int) Int {
 	dif := max.Minus(min).Plus(I(1)) // this will panic if the difference beween
 	// min and max is greater than max.MaxInt64 - 1
 
-	randomValue := I(randomGenerator.Int63())
+	randomValue := I64(randomGenerator.Int63())
 	return randomValue.Mod(dif).Plus(min)
 }

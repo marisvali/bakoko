@@ -109,7 +109,11 @@ var ZERO = I(0)
 var ONE = I(1)
 var TWO = I(2)
 
-func I(val int64) Int {
+func I(val int) Int {
+	return Int{int64(val)}
+}
+
+func I64(val int64) Int {
 	return Int{val}
 }
 
