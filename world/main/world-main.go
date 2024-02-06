@@ -41,6 +41,7 @@ func main() {
 			break
 		}
 		frameIdx++
+		w.JustReloaded = ZERO
 	}
 }
 
@@ -88,6 +89,7 @@ func loadWorld(w *World) {
 	levelString := ReadAllText(data.Level)
 	w.Obstacles = LevelFromString(levelString)
 	w.Balls = []Ball{} // reset balls
+	w.JustReloaded = ONE
 }
 
 func loadWorldData(folder string) (data worldData) {

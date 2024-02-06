@@ -30,6 +30,11 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		return
 	}
 
+	if w.JustReloaded.Eq(ONE) {
+		// Reset target if the world just reloaded.
+		p.HasTarget = false
+	}
+
 	// TODO: find a more generic way of selecting which player is which.
 	player := &w.Player2
 
@@ -170,7 +175,7 @@ func main() {
 		}
 
 		// This may or may not block, who cares?
-		guiProxy.SendPaintData(&ai.DebugInfo)
+		//guiProxy.SendPaintData(&ai.DebugInfo)
 	}
 }
 

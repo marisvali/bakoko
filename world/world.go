@@ -98,6 +98,7 @@ type World struct {
 	BallSpeed    Int
 	BallDec      Int
 	DebugInfo    DebugInfo
+	JustReloaded Int
 }
 
 type PlayerInput struct {
@@ -123,6 +124,7 @@ func (w *World) Serialize() []byte {
 	SerializeSlice(buf, w.Balls)
 	w.Obstacles.Serialize(buf)
 	Serialize(buf, w.ObstacleSize)
+	Serialize(buf, w.JustReloaded)
 	return buf.Bytes()
 }
 
@@ -132,6 +134,7 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	DeserializeSlice(buf, &w.Balls)
 	w.Obstacles.Deserialize(buf)
 	Deserialize(buf, &w.ObstacleSize)
+	Deserialize(buf, &w.JustReloaded)
 }
 
 func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {

@@ -1,6 +1,6 @@
 {
-  "BallSpeed": 400,
-  "BallDec": 1,
+  "BallSpeed": 600,
+  "BallDec": 5,
   "Player1X": 13000,
   "Player1Y": 34000,
   "Player1Speed": 700,
