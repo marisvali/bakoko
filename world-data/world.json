@@ -6,7 +6,7 @@
   "Player1Y": 50000,
   "Player1Speed": 350,
   "Player1Health": 3,
-  "Player1NBalls": 0,
+  "Player1NBalls": 20,
   "Player1BallType": 1,
   "Player1Diameter": 5000,
   "Player2X": 10000,

@@ -22,6 +22,7 @@ type Player struct {
 	Health   Int
 	Speed    Int
 	JustHit  Int
+	Stunned  Int
 }
 
 type Matrix struct {
@@ -406,4 +407,10 @@ func (w *World) Step(input *Input, frameIdx int) {
 	UpdateBallPositions(w.Balls, squares, w.BallDec)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
 	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
+	if w.Player2.JustHit.Eq(ONE) {
+		w.Player2.Stunned = I(100)
+	}
+	if w.Player2.Stunned.Gt(ZERO) {
+		w.Player2.Stunned.Dec()
+	}
 }

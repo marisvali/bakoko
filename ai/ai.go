@@ -38,6 +38,10 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 	// TODO: find a more generic way of selecting which player is which.
 	player := &w.Player2
 
+	if player.Stunned.Gt(ZERO) {
+		return
+	}
+
 	if time.Now().Sub(p.LastShot) > p.PauseBetweenShots {
 		ballStart := player.Bounds.Center
 		ballEnd := w.Player1.Bounds.Center
