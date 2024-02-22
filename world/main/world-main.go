@@ -48,6 +48,7 @@ func main() {
 type worldData struct {
 	BallSpeed       int
 	BallDec         int
+	BallDiameter    int
 	Player1X        int
 	Player1Y        int
 	Player1Speed    int
@@ -71,6 +72,7 @@ func loadWorld(w *World) {
 
 	w.BallSpeed = I(data.BallSpeed)
 	w.BallDec = I(data.BallDec)
+	w.BallDiameter = I(data.BallDiameter)
 	w.Player1.Bounds.Center.X = I(data.Player1X)
 	w.Player1.Bounds.Center.Y = I(data.Player1Y)
 	w.Player1.Bounds.Diameter = I(data.Player1Diameter)
@@ -87,8 +89,24 @@ func loadWorld(w *World) {
 	w.Player2.Bounds.Diameter = I(data.Player2Diameter)
 	w.ObstacleSize = I(data.ObstacleSize)
 	levelString := ReadAllText(data.Level)
-	w.Obstacles = LevelFromString(levelString)
+	var balls1 []Pt
+	//var balls2 []Pt
+	w.Obstacles, balls1, _ = LevelFromString(levelString)
 	w.Balls = []Ball{} // reset balls
+	for i := range balls1 {
+		b := Ball{
+			//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
+			Bounds: Circle{
+				Center: Pt{balls1[i].X.Times(w.ObstacleSize).Plus(w.ObstacleSize.DivBy(TWO)),
+					balls1[i].Y.Times(w.ObstacleSize).Plus(w.ObstacleSize.DivBy(TWO))},
+				Diameter: w.BallDiameter},
+			MoveDir:        IPt(0, 0),
+			Speed:          ZERO,
+			CanBeCollected: false,
+			Type:           w.Player1.BallType,
+		}
+		w.Balls = append(w.Balls, b)
+	}
 	w.JustReloaded = ONE
 }
 

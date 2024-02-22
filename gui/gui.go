@@ -148,15 +148,21 @@ func (g *Game) DrawPlayer(
 	// Draw a small sprite for each ball that the player has.
 	realDiam := g.WorldToScreen(player.Bounds.Diameter)
 	for idx := int64(0); idx < player.NBalls.ToInt64(); idx++ {
-		smallX := x - realDiam/2 - 10*g.data.ScaleFactor
-		smallY := y + (float64(idx*12)+10)*g.data.ScaleFactor - realDiam/2
+		col := float64(idx / 5)
+		row := float64(idx % 5)
+		smallX := x - realDiam/2 - 10*g.data.ScaleFactor - col*10*g.data.ScaleFactor
+		smallY := y + (float64(row*12)+5)*g.data.ScaleFactor - realDiam/2
 		smallDiam := float64(10) * g.data.ScaleFactor
 		g.DrawSprite(ballImage, smallX, smallY, smallDiam)
 	}
 
 	// Draw a small sprite for each health point that the player has.
+	startX := x - realDiam/2
+	fullWidth := (float64(6 * 12)) * g.data.ScaleFactor
+	actualWidth := (float64(player.Health.ToInt64() * 12)) * g.data.ScaleFactor
+	startX += (fullWidth - actualWidth) / 2
 	for idx := int64(0); idx < player.Health.ToInt64(); idx++ {
-		smallX := x + (float64(idx*12)+12)*g.data.ScaleFactor - realDiam/2
+		smallX := startX + (float64(idx*12))*g.data.ScaleFactor
 		smallY := y - realDiam/2 - 10*g.data.ScaleFactor
 		smallDiam := float64(10) * g.data.ScaleFactor
 		g.DrawSprite(healthImage, smallX, smallY, smallDiam)
@@ -232,8 +238,54 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// Players
-	g.DrawPlayer(g.player1, g.ball1, g.health, &g.w.Player1)
-	g.DrawPlayer(g.player2, g.ball2, g.health, &g.w.Player2)
+
+	// Player1 was just hit.
+	if g.w.Player1.JustHit.Eq(ONE) {
+		g.hitAnimation1 = 255
+	}
+
+	if g.hitAnimation1 > 0 {
+		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
+		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
+
+		op := &ebiten.DrawImageOptions{}
+		// Scale image to cover the entire screen.
+		imgSize := g.hit.Bounds().Size()
+		targetSize := screen.Bounds().Size()
+		newDx := float64(targetSize.X) / float64(imgSize.X)
+		newDy := float64(targetSize.Y) / float64(imgSize.Y)
+		op.GeoM.Scale(newDx, newDy)
+		op.GeoM.Translate(0, 0)
+		colorScale := float32(g.hitAnimation1) / float32(255)
+		op.ColorScale.SetR(colorScale)
+		op.ColorScale.SetG(colorScale)
+		op.ColorScale.SetB(colorScale)
+		op.ColorScale.SetA(colorScale)
+		screen.DrawImage(g.hit, op)
+
+		g.hitAnimation1 -= 10
+	}
+
+	if g.hitAnimation1 > 0 {
+		g.DrawPlayer(g.player1Hit, g.ball1, g.health, &g.w.Player1)
+	} else {
+		g.DrawPlayer(g.player1, g.ball1, g.health, &g.w.Player1)
+	}
+
+	// Player2 was just hit.
+	if g.w.Player2.JustHit.Eq(ONE) {
+		g.hitAnimation2 = 255
+	}
+
+	if g.hitAnimation2 > 0 {
+		g.hitAnimation2 -= 10
+	}
+
+	if g.hitAnimation2 > 0 {
+		g.DrawPlayer(g.player2Hit, g.ball2, g.health, &g.w.Player2)
+	} else {
+		g.DrawPlayer(g.player2, g.ball2, g.health, &g.w.Player2)
+	}
 
 	// Balls
 	for _, ball := range g.w.Balls {
@@ -288,19 +340,24 @@ type Game struct {
 	worldProxy     WorldProxy
 	painters       []PainterProxy
 	player1        *ebiten.Image
+	player1Hit     *ebiten.Image
 	player2        *ebiten.Image
+	player2Hit     *ebiten.Image
 	ball1          *ebiten.Image
 	ball2          *ebiten.Image
 	health         *ebiten.Image
 	obstacle       *ebiten.Image
 	background     *ebiten.Image
 	screen         *ebiten.Image
+	hit            *ebiten.Image
 	data           GuiData
 	times          []time.Time
 	filledSquare   *ebiten.Image
 	debugInfo      []DebugInfo
 	debugInfoMutex []sync.Mutex
 	folderWatcher  FolderWatcher
+	hitAnimation1  int
+	hitAnimation2  int
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -355,10 +412,13 @@ func (g *Game) loadGuiData() {
 		g.ball1 = loadImage("gui-data/ball1.png")
 		g.ball2 = loadImage("gui-data/ball2.png")
 		g.player1 = loadImage("gui-data/player1.png")
+		g.player1Hit = loadImage("gui-data/player1-hit.png")
 		g.player2 = loadImage("gui-data/player2.png")
+		g.player2Hit = loadImage("gui-data/player2-hit.png")
 		g.health = loadImage("gui-data/health.png")
 		g.obstacle = loadImage("gui-data/obstacle.png")
 		g.background = loadImage("gui-data/background.png")
+		g.hit = loadImage("gui-data/hit.png")
 		LoadJSON("gui-data/gui.json", &g.data)
 		if CheckFailed == nil {
 			break

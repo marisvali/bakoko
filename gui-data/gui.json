@@ -1,7 +1,7 @@
 {
     "ScaleFactor": 1.5,
-    "WindowWidth": 1900,
-    "WindowHeight": 1000,
+    "WindowWidth": 1800,
+    "WindowHeight": 900,
     "PlayerOffsetX": -1,
     "PlayerOffsetY": -2,
     "PlayerOffsetSize": 25,

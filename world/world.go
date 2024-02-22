@@ -21,6 +21,7 @@ type Player struct {
 	BallType Int
 	Health   Int
 	Speed    Int
+	JustHit  Int
 }
 
 type Matrix struct {
@@ -97,6 +98,7 @@ type World struct {
 	ObstacleSize Int
 	BallSpeed    Int
 	BallDec      Int
+	BallDiameter Int
 	DebugInfo    DebugInfo
 	JustReloaded Int
 }
@@ -137,7 +139,7 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &w.JustReloaded)
 }
 
-func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
+func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int, ballDiameter Int) {
 	if player.NBalls.Leq(I(0)) {
 		return
 	}
@@ -147,11 +149,16 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
 	moveDir.SetLen(U(1))
 	speed := ballSpeed
 
+	// If the player moves right and shoots a ball to the right, the speed should compound.
+	// How do I make this true?
+	// I can only mess with the speed. The direction stays the same.
+	// So, if I move right and I shoot the ball to the right,
+
 	ball := Ball{
 		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
 		Bounds: Circle{
 			Center:   player.Bounds.Center,
-			Diameter: U(30)},
+			Diameter: ballDiameter},
 		MoveDir:        moveDir,
 		Speed:          speed,
 		CanBeCollected: false,
@@ -159,17 +166,17 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int) {
 	}
 	*balls = append(*balls, ball)
 	// Infinite balls, for debugging purposes.
-	//player.NBalls.Dec()
+	player.NBalls.Dec()
 }
 
-func ShootBallDebug(balls *[]Ball, orig, dest Pt, speed Int) {
+func ShootBallDebug(balls *[]Ball, orig, dest Pt, speed Int, ballDiameter Int) {
 	moveDir := orig.To(dest)
 	moveDir.SetLen(U(1))
 
 	ball := Ball{
 		Bounds: Circle{
 			Center:   orig,
-			Diameter: U(30)},
+			Diameter: ballDiameter},
 		MoveDir:        moveDir,
 		Speed:          speed,
 		CanBeCollected: false,
@@ -302,7 +309,7 @@ func MoveStraightLine(start, end Pt) (input PlayerInput) {
 }
 
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
-	ballSpeed Int, squares []Square) {
+	ballSpeed Int, ballDiameter Int, squares []Square) {
 
 	// Try horizontal movement first.
 	newPosX := player.Bounds.Center
@@ -325,7 +332,7 @@ func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	MovePlayer(player, newPosY, squares)
 
 	if input.Shoot {
-		ShootBall(player, balls, input.ShootPt, ballSpeed)
+		ShootBall(player, balls, input.ShootPt, ballSpeed, ballDiameter)
 	}
 }
 
@@ -338,6 +345,7 @@ func FriendlyBall(player Player, ball Ball) bool {
 }
 
 func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
+	player.JustHit = ZERO
 	toBeDeleted := make([]bool, len(*balls))
 	for idx, ball := range *balls {
 		if !PlayerAndBallAreTouching(*player, ball) {
@@ -348,15 +356,16 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 			if ball.CanBeCollected {
 				toBeDeleted[idx] = true
 				// Disable this for debugging purposes.
-				// player.NBalls.Inc()
+				player.NBalls.Inc()
 			}
 		} else {
 			if player.Health.Gt(I(0)) {
 				player.Health.Dec()
+				player.JustHit = ONE
 			}
 			toBeDeleted[idx] = true
 			// Disable this for debugging purposes.
-			//player.NBalls.Inc()
+			player.NBalls.Inc()
 		}
 	}
 
@@ -367,6 +376,7 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 		}
 	}
 	*balls = newBalls
+	return
 }
 
 func ObstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
@@ -387,11 +397,11 @@ func ObstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
 func (w *World) Step(input *Input, frameIdx int) {
 	squares := ObstaclesToSquares(w.Obstacles, w.ObstacleSize)
 
-	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input, w.BallSpeed, squares)
+	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input, w.BallSpeed, w.BallDiameter, squares)
 	if frameIdx == 10 {
 		//ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
 	}
-	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input, w.BallSpeed, squares)
+	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input, w.BallSpeed, w.BallDiameter, squares)
 
 	UpdateBallPositions(w.Balls, squares, w.BallDec)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)

@@ -146,7 +146,7 @@ func main() {
 	var guiProxy GuiProxy
 	var w World
 	var ai PlayerAI
-	ai.PauseBetweenShots = 500 * time.Millisecond
+	ai.PauseBetweenShots = 1500 * time.Millisecond
 	ai.LastShot = time.Now()
 
 	worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902

@@ -150,7 +150,7 @@ xxxxxxxxxxxxx
 	return
 }
 
-func LevelFromString(level string) (m Matrix) {
+func LevelFromString(level string) (m Matrix, balls1 []Pt, balls2 []Pt) {
 	// This is the kind of string that can get turned into a level.
 	//	level = `
 	//xxxxxxxxxxxxx
@@ -203,6 +203,10 @@ func LevelFromString(level string) (m Matrix) {
 			continue
 		} else if c == 'x' {
 			m.Set(I(row), I(col), I(1))
+		} else if c == '1' {
+			balls1 = append(balls1, IPt(col, row))
+		} else if c == '2' {
+			balls2 = append(balls2, IPt(col, row))
 		}
 		col++
 	}
