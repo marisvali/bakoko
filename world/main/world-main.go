@@ -46,25 +46,27 @@ func main() {
 }
 
 type worldData struct {
-	BallSpeed       int
-	BallDec         int
-	BallDiameter    int
-	Player1X        int
-	Player1Y        int
-	Player1Speed    int
-	Player1Health   int
-	Player1NBalls   int
-	Player1BallType int
-	Player1Diameter int
-	Player2X        int
-	Player2Y        int
-	Player2Speed    int
-	Player2Health   int
-	Player2NBalls   int
-	Player2BallType int
-	Player2Diameter int
-	ObstacleSize    int
-	Level           string
+	BallSpeed                int
+	BallDec                  int
+	BallDiameter             int
+	Player1X                 int
+	Player1Y                 int
+	Player1Speed             int
+	Player1Health            int
+	Player1NBalls            int
+	Player1BallType          int
+	Player1Diameter          int
+	Player1StunnedImobilizes bool
+	Player2X                 int
+	Player2Y                 int
+	Player2Speed             int
+	Player2Health            int
+	Player2NBalls            int
+	Player2BallType          int
+	Player2Diameter          int
+	Player2StunnedImobilizes bool
+	ObstacleSize             int
+	Level                    string
 }
 
 func loadWorld(w *World) {
@@ -75,11 +77,12 @@ func loadWorld(w *World) {
 	w.BallDiameter = I(data.BallDiameter)
 	w.Player1.Bounds.Center.X = I(data.Player1X)
 	w.Player1.Bounds.Center.Y = I(data.Player1Y)
-	w.Player1.Bounds.Diameter = I(data.Player1Diameter)
 	w.Player1.Speed = I(data.Player1Speed)
 	w.Player1.Health = I(data.Player1Health)
 	w.Player1.NBalls = I(data.Player1NBalls)
 	w.Player1.BallType = I(data.Player1BallType)
+	w.Player1.Bounds.Diameter = I(data.Player1Diameter)
+	w.Player1.StunnedImobilizes = data.Player1StunnedImobilizes
 	w.Player2.Bounds.Center.X = I(data.Player2X)
 	w.Player2.Bounds.Center.Y = I(data.Player2Y)
 	w.Player2.Speed = I(data.Player2Speed)
@@ -87,6 +90,7 @@ func loadWorld(w *World) {
 	w.Player2.NBalls = I(data.Player2NBalls)
 	w.Player2.BallType = I(data.Player2BallType)
 	w.Player2.Bounds.Diameter = I(data.Player2Diameter)
+	w.Player2.StunnedImobilizes = data.Player2StunnedImobilizes
 	w.ObstacleSize = I(data.ObstacleSize)
 	levelString := ReadAllText(data.Level)
 	var balls1 []Pt

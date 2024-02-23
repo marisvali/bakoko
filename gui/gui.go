@@ -32,6 +32,10 @@ func colorHex(hexVal int) color.Color {
 	}
 }
 
+func playerWasJustHit(player Player, prevState Int) bool {
+	return prevState.Neq(player.State) && player.State.Eq(PlayerStunned)
+}
+
 func (g *Game) Update() error {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
@@ -63,6 +67,26 @@ func (g *Game) Update() error {
 	}
 
 	g.SyncWithWorld(playerInput)
+
+	// React to updates.
+	// Player1 was just hit.
+	if playerWasJustHit(g.w.Player1, g.player1PreviousState) {
+		g.hitAnimation1 = 255
+	}
+	if g.hitAnimation1 > 0 {
+		g.hitAnimation1 -= 10
+	}
+
+	// Player2 was just hit.
+	if playerWasJustHit(g.w.Player2, g.player2PreviousState) {
+		g.hitAnimation2 = 255
+	}
+	if g.hitAnimation2 > 0 {
+		g.hitAnimation2 -= 10
+	}
+
+	g.player1PreviousState = g.w.Player1.State
+	g.player2PreviousState = g.w.Player2.State
 	return nil
 }
 
@@ -240,9 +264,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Players
 
 	// Player1 was just hit.
-	if g.w.Player1.JustHit.Eq(ONE) {
-		g.hitAnimation1 = 255
-	}
 
 	if g.hitAnimation1 > 0 {
 		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
@@ -262,26 +283,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		op.ColorScale.SetB(colorScale)
 		op.ColorScale.SetA(colorScale)
 		screen.DrawImage(g.hit, op)
-
-		g.hitAnimation1 -= 10
 	}
 
-	if g.hitAnimation1 > 0 {
+	if g.w.Player1.State.Eq(PlayerStunned) {
 		g.DrawPlayer(g.player1Hit, g.ball1, g.health, &g.w.Player1)
 	} else {
 		g.DrawPlayer(g.player1, g.ball1, g.health, &g.w.Player1)
 	}
 
-	// Player2 was just hit.
-	if g.w.Player2.JustHit.Eq(ONE) {
-		g.hitAnimation2 = 255
-	}
-
-	if g.hitAnimation2 > 0 {
-		g.hitAnimation2 -= 10
-	}
-
-	if g.hitAnimation2 > 0 {
+	if g.w.Player2.State.Eq(PlayerStunned) {
 		g.DrawPlayer(g.player2Hit, g.ball2, g.health, &g.w.Player2)
 	} else {
 		g.DrawPlayer(g.player2, g.ball2, g.health, &g.w.Player2)
@@ -358,6 +368,10 @@ type Game struct {
 	folderWatcher  FolderWatcher
 	hitAnimation1  int
 	hitAnimation2  int
+	// The UI is responsible for keeping track of state changes that are
+	// relevant for it.
+	player1PreviousState Int
+	player2PreviousState Int
 }
 
 func loadImage(str string) *ebiten.Image {

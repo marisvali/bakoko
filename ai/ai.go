@@ -22,7 +22,7 @@ func PlayerIsAt(p *Player, pt Pt) bool {
 	return p.Bounds.Center.SquaredDistTo(pt).Lt(U(5).Sqr())
 }
 
-func (p *PlayerAI) Step(w *World) (input PlayerInput) {
+func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 	// Check somehow if the world-main is initialized.
 	if w.Obstacles.NRows().Leq(ZERO) {
 		// If there's no world-main matrix, we can probably safely assume
@@ -30,48 +30,45 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		return
 	}
 
+	// TODO: find a more generic way of selecting which body is which.
+	body := &w.Player2
+
 	if w.JustReloaded.Eq(ONE) {
 		// Reset target if the world just reloaded.
-		p.HasTarget = false
+		mind.HasTarget = false
+
 	}
 
-	// TODO: find a more generic way of selecting which player is which.
-	player := &w.Player2
-
-	if player.Stunned.Gt(ZERO) {
-		return
-	}
-
-	if time.Now().Sub(p.LastShot) > p.PauseBetweenShots {
-		ballStart := player.Bounds.Center
+	if time.Now().Sub(mind.LastShot) > mind.PauseBetweenShots {
+		ballStart := body.Bounds.Center
 		ballEnd := w.Player1.Bounds.Center
 		if pathIsClear(w.Obstacles, w.ObstacleSize, ballStart, ballEnd, U(50)) {
 			input.Shoot = true
 			input.ShootPt = ballEnd
-			p.LastShot = time.Now()
+			mind.LastShot = time.Now()
 		}
 	}
 
 	//return
 
 	finalTarget := w.Player1.Bounds.Center
-	if p.HasTarget {
+	if mind.HasTarget {
 		// If we're at the target, disable the target which signals we need
 		// a new path.
-		if PlayerIsAt(player, p.TargetPt) {
-			p.HasTarget = false
+		if PlayerIsAt(body, mind.TargetPt) {
+			mind.HasTarget = false
 		}
 	}
 
 	// Only compute a new path when we don't have a target to go to.
-	if !p.HasTarget && !PlayerIsAt(player, finalTarget) {
-		mw, sizeW, offsetW := GetWalkableMatrix(w.Obstacles, w.ObstacleSize, player.Bounds.Diameter)
+	if !mind.HasTarget && !PlayerIsAt(body, finalTarget) {
+		mw, sizeW, offsetW := GetWalkableMatrix(w.Obstacles, w.ObstacleSize, body.Bounds.Diameter)
 
-		playerPos := player.Bounds.Center
+		playerPos := body.Bounds.Center
 		startPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, playerPos)
 		endPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, finalTarget)
 
-		p.DebugInfo.Points = []DebugPoint{}
+		mind.DebugInfo.Points = []DebugPoint{}
 		//w.Obs = []Square{
 		//	{Pt{U(100), U(100)}, U(10)},
 		//	{playerPos, U(10)},
@@ -88,7 +85,7 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 				} else {
 					pt.Col = color.RGBA{255, 0, 0, 255}
 				}
-				p.DebugInfo.Points = append(p.DebugInfo.Points, pt)
+				mind.DebugInfo.Points = append(mind.DebugInfo.Points, pt)
 			}
 		}
 
@@ -99,38 +96,39 @@ func (p *PlayerAI) Step(w *World) (input PlayerInput) {
 		var pathWorld []Pt
 		for _, pt := range path {
 			pathWorld = append(pathWorld, pt.Times(sizeW))
-			p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
+			mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
 		}
 
-		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
-		p.DebugInfo.Points = append(p.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{0, 0, 0, 255}})
+		mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
+		mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{0, 0, 0, 255}})
 
 		if len(pathWorld) == 0 {
 			// Don't do anything.
-			p.HasTarget = false
+			mind.HasTarget = false
 		} else {
-			// Remove the first point if the player is basically there.
+			// Remove the first point if the body is basically there.
 			if pathWorld[0].SquaredDistTo(playerPos).Lt(U(5).Sqr()) {
 				pathWorld = pathWorld[1:]
 			}
 
 			if len(pathWorld) == 0 {
 				// Just move towards the target.
-				p.HasTarget = true
-				p.TargetPt = finalTarget
+				mind.HasTarget = true
+				mind.TargetPt = finalTarget
 			} else {
 				// Move towards the next point in the path
-				p.HasTarget = true
-				p.TargetPt = pathWorld[0]
+				mind.HasTarget = true
+				mind.TargetPt = pathWorld[0]
 			}
 		}
 	}
 
-	if p.HasTarget {
-		oldInput := input
-		input = MoveStraightLine(player.Bounds.Center, p.TargetPt)
-		input.Shoot = oldInput.Shoot
-		input.ShootPt = oldInput.ShootPt
+	if mind.HasTarget {
+		moveInput := MoveStraightLine(body.Bounds.Center, mind.TargetPt)
+		input.MoveLeft = moveInput.MoveLeft
+		input.MoveRight = moveInput.MoveRight
+		input.MoveUp = moveInput.MoveUp
+		input.MoveDown = moveInput.MoveDown
 	}
 
 	return

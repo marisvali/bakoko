@@ -9,6 +9,7 @@
   "Player1NBalls": 20,
   "Player1BallType": 1,
   "Player1Diameter": 5000,
+  "Player1StunnedImobilizes": false,
   "Player2X": 10000,
   "Player2Y": 30000,
   "Player2Speed": 100,
@@ -16,6 +17,7 @@
   "Player2NBalls": 10,
   "Player2BallType": 2,
   "Player2Diameter": 5000,
+  "Player2StunnedImobilizes": true,
   "ObstacleSize": 4000,
   "Level": "world-data/level3.txt"
 }

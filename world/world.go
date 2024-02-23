@@ -16,14 +16,18 @@ type Ball struct {
 }
 
 type Player struct {
-	Bounds   Circle
-	NBalls   Int
-	BallType Int
-	Health   Int
-	Speed    Int
-	JustHit  Int
-	Stunned  Int
+	Bounds            Circle
+	NBalls            Int
+	BallType          Int
+	Health            Int
+	Speed             Int
+	State             Int
+	StunnedImobilizes bool
+	StunnedTime       Int
 }
+
+var PlayerRegular = I(0)
+var PlayerStunned = I(1)
 
 type Matrix struct {
 	cells []Int
@@ -312,6 +316,10 @@ func MoveStraightLine(start, end Pt) (input PlayerInput) {
 func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	ballSpeed Int, ballDiameter Int, squares []Square) {
 
+	if player.State.Eq(PlayerStunned) && player.StunnedImobilizes {
+		return // Can't move or shoot while stunned.
+	}
+
 	// Try horizontal movement first.
 	newPosX := player.Bounds.Center
 	if input.MoveRight {
@@ -346,7 +354,6 @@ func FriendlyBall(player Player, ball Ball) bool {
 }
 
 func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
-	player.JustHit = ZERO
 	toBeDeleted := make([]bool, len(*balls))
 	for idx, ball := range *balls {
 		if !PlayerAndBallAreTouching(*player, ball) {
@@ -362,11 +369,19 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 		} else {
 			if player.Health.Gt(I(0)) {
 				player.Health.Dec()
-				player.JustHit = ONE
+				player.StunnedTime = I(30)
+				player.State = PlayerStunned
 			}
 			toBeDeleted[idx] = true
 			// Disable this for debugging purposes.
 			player.NBalls.Inc()
+		}
+	}
+
+	if player.StunnedTime.Gt(ZERO) {
+		player.StunnedTime.Dec()
+		if player.StunnedTime.Eq(ZERO) {
+			player.State = PlayerRegular
 		}
 	}
 
@@ -407,10 +422,4 @@ func (w *World) Step(input *Input, frameIdx int) {
 	UpdateBallPositions(w.Balls, squares, w.BallDec)
 	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
 	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
-	if w.Player2.JustHit.Eq(ONE) {
-		w.Player2.Stunned = I(100)
-	}
-	if w.Player2.Stunned.Gt(ZERO) {
-		w.Player2.Stunned.Dec()
-	}
 }
