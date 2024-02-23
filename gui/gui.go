@@ -32,8 +32,8 @@ func colorHex(hexVal int) color.Color {
 	}
 }
 
-func playerWasJustHit(player Player, prevState Int) bool {
-	return prevState.Neq(player.State) && player.State.Eq(PlayerStunned)
+func playerWasJustHit(player Player, prevHealth Int) bool {
+	return player.Health.Lt(prevHealth)
 }
 
 func (g *Game) Update() error {
@@ -70,23 +70,25 @@ func (g *Game) Update() error {
 
 	// React to updates.
 	// Player1 was just hit.
-	if playerWasJustHit(g.w.Player1, g.player1PreviousState) {
+	if playerWasJustHit(g.w.Player1, g.player1PreviousHealth) {
 		g.hitAnimation1 = 255
 	}
+	g.player1PreviousHealth = g.w.Player1.Health
+
 	if g.hitAnimation1 > 0 {
 		g.hitAnimation1 -= 10
 	}
 
 	// Player2 was just hit.
-	if playerWasJustHit(g.w.Player2, g.player2PreviousState) {
+	if playerWasJustHit(g.w.Player2, g.player2PreviousHealth) {
 		g.hitAnimation2 = 255
 	}
+	g.player2PreviousHealth = g.w.Player2.Health
+
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
 	}
 
-	g.player1PreviousState = g.w.Player1.State
-	g.player2PreviousState = g.w.Player2.State
 	return nil
 }
 
@@ -261,10 +263,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	// Players
-
-	// Player1 was just hit.
-
+	// Player1
 	if g.hitAnimation1 > 0 {
 		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
 		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
@@ -289,6 +288,27 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.DrawPlayer(g.player1Hit, g.ball1, g.health, &g.w.Player1)
 	} else {
 		g.DrawPlayer(g.player1, g.ball1, g.health, &g.w.Player1)
+	}
+
+	// Player2
+	if g.hitAnimation2 > 0 {
+		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
+		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
+
+		op := &ebiten.DrawImageOptions{}
+		// Scale image to cover the entire screen.
+		imgSize := g.hitGood.Bounds().Size()
+		targetSize := screen.Bounds().Size()
+		newDx := float64(targetSize.X) / float64(imgSize.X)
+		newDy := float64(targetSize.Y) / float64(imgSize.Y)
+		op.GeoM.Scale(newDx, newDy)
+		op.GeoM.Translate(0, 0)
+		colorScale := float32(g.hitAnimation2) / float32(255)
+		op.ColorScale.SetR(colorScale)
+		op.ColorScale.SetG(colorScale)
+		op.ColorScale.SetB(colorScale)
+		op.ColorScale.SetA(colorScale)
+		screen.DrawImage(g.hitGood, op)
 	}
 
 	if g.w.Player2.State.Eq(PlayerStunned) {
@@ -360,6 +380,7 @@ type Game struct {
 	background     *ebiten.Image
 	screen         *ebiten.Image
 	hit            *ebiten.Image
+	hitGood        *ebiten.Image
 	data           GuiData
 	times          []time.Time
 	filledSquare   *ebiten.Image
@@ -370,8 +391,8 @@ type Game struct {
 	hitAnimation2  int
 	// The UI is responsible for keeping track of state changes that are
 	// relevant for it.
-	player1PreviousState Int
-	player2PreviousState Int
+	player1PreviousHealth Int
+	player2PreviousHealth Int
 }
 
 func loadImage(str string) *ebiten.Image {
@@ -433,6 +454,7 @@ func (g *Game) loadGuiData() {
 		g.obstacle = loadImage("gui-data/obstacle.png")
 		g.background = loadImage("gui-data/background.png")
 		g.hit = loadImage("gui-data/hit.png")
+		g.hitGood = loadImage("gui-data/hit-good.png")
 		LoadJSON("gui-data/gui.json", &g.data)
 		if CheckFailed == nil {
 			break
