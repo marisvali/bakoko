@@ -117,6 +117,7 @@ type PlayerInput struct {
 	ShootPt   Pt
 	Quit      bool
 	Reload    bool
+	Pause     bool
 }
 
 type Input struct {

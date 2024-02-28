@@ -5,6 +5,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/font/opentype"
 	"image"
 	"image/color"
 	"math"
@@ -36,7 +40,7 @@ func playerWasJustHit(player Player, prevHealth Int) bool {
 	return player.Health.Lt(prevHealth)
 }
 
-func (g *Game) Update() error {
+func (g *Game) UpdateGameOngoing() {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -52,6 +56,10 @@ func (g *Game) Update() error {
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 	playerInput.Reload = slices.Contains(justPressedKeys, ebiten.KeyR)
+
+	if slices.Contains(justPressedKeys, ebiten.KeyEscape) {
+		g.state = GamePaused
+	}
 
 	if g.folderWatcher.FolderContentsChanged() {
 		g.loadGuiData()
@@ -89,6 +97,94 @@ func (g *Game) Update() error {
 		g.hitAnimation2 -= 10
 	}
 
+	if g.w.Player1.Health.Eq(ZERO) {
+		g.state = GameLost
+	}
+
+	if g.w.Player2.Health.Eq(ZERO) {
+		g.state = GameWon
+	}
+}
+
+func (g *Game) UpdateGamePaused() {
+	// Get keyboard input.
+	var pressedKeys []ebiten.Key
+	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
+
+	playerInput := PlayerInput{}
+	playerInput.Pause = true
+
+	var justPressedKeys []ebiten.Key
+	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
+	if slices.Contains(justPressedKeys, ebiten.KeyR) {
+		playerInput.Reload = true
+		g.state = GameOngoing
+	}
+
+	if slices.Contains(justPressedKeys, ebiten.KeyEscape) {
+		playerInput.Pause = false
+		g.state = GameOngoing
+	}
+
+	if g.folderWatcher.FolderContentsChanged() {
+		g.loadGuiData()
+	}
+
+	g.SyncWithWorld(playerInput)
+}
+
+func (g *Game) UpdateGameWon() {
+	// Get keyboard input.
+	var pressedKeys []ebiten.Key
+	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
+
+	playerInput := PlayerInput{}
+	playerInput.Pause = true
+
+	var justPressedKeys []ebiten.Key
+	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
+	if slices.Contains(justPressedKeys, ebiten.KeyR) {
+		playerInput.Reload = true
+		g.state = GameOngoing
+	}
+
+	if g.folderWatcher.FolderContentsChanged() {
+		g.loadGuiData()
+	}
+	g.SyncWithWorld(playerInput)
+}
+
+func (g *Game) UpdateGameLost() {
+	// Get keyboard input.
+	var pressedKeys []ebiten.Key
+	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
+
+	playerInput := PlayerInput{}
+	playerInput.Pause = true
+
+	var justPressedKeys []ebiten.Key
+	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
+	if slices.Contains(justPressedKeys, ebiten.KeyR) {
+		playerInput.Reload = true
+		g.state = GameOngoing
+	}
+
+	if g.folderWatcher.FolderContentsChanged() {
+		g.loadGuiData()
+	}
+	g.SyncWithWorld(playerInput)
+}
+
+func (g *Game) Update() error {
+	if g.state == GameOngoing {
+		g.UpdateGameOngoing()
+	} else if g.state == GamePaused {
+		g.UpdateGamePaused()
+	} else if g.state == GameWon {
+		g.UpdateGameWon()
+	} else if g.state == GameLost {
+		g.UpdateGameLost()
+	}
 	return nil
 }
 
@@ -157,6 +253,24 @@ func (g *Game) DrawSprite(img *ebiten.Image,
 	//op.GeoM.Scale(newDx, newDy)
 	//op.GeoM.Translate(x, y)
 	//screen.DrawImage(dbgImg, op)
+}
+
+func (g *Game) DrawSprite2(img *ebiten.Image,
+	x float64, y float64, targetWidth float64, targetHeight float64) {
+	op := &ebiten.DrawImageOptions{}
+
+	// Resize image to fit the target size we want to draw.
+	// This kind of scaling is very useful during development when the final
+	// sizes are not decided, and thus it's impossible to have final sprites.
+	// For an actual release, scaling should be avoided.
+	imgSize := img.Bounds().Size()
+	newDx := targetWidth / float64(imgSize.X)
+	newDy := targetHeight / float64(imgSize.Y)
+	op.GeoM.Scale(newDx, newDy)
+
+	op.GeoM.Translate(x, y)
+
+	g.screen.DrawImage(img, op)
 }
 
 func (g *Game) DrawPlayer(
@@ -264,26 +378,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// Player1
-	if g.hitAnimation1 > 0 {
-		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
-		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
-
-		op := &ebiten.DrawImageOptions{}
-		// Scale image to cover the entire screen.
-		imgSize := g.hit.Bounds().Size()
-		targetSize := screen.Bounds().Size()
-		newDx := float64(targetSize.X) / float64(imgSize.X)
-		newDy := float64(targetSize.Y) / float64(imgSize.Y)
-		op.GeoM.Scale(newDx, newDy)
-		op.GeoM.Translate(0, 0)
-		colorScale := float32(g.hitAnimation1) / float32(255)
-		op.ColorScale.SetR(colorScale)
-		op.ColorScale.SetG(colorScale)
-		op.ColorScale.SetB(colorScale)
-		op.ColorScale.SetA(colorScale)
-		screen.DrawImage(g.hit, op)
-	}
-
 	if g.w.Player1.State.Eq(PlayerStunned) {
 		g.DrawPlayer(g.player1Hit, g.ball1, g.health, &g.w.Player1)
 	} else {
@@ -291,26 +385,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// Player2
-	if g.hitAnimation2 > 0 {
-		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
-		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
-
-		op := &ebiten.DrawImageOptions{}
-		// Scale image to cover the entire screen.
-		imgSize := g.hitGood.Bounds().Size()
-		targetSize := screen.Bounds().Size()
-		newDx := float64(targetSize.X) / float64(imgSize.X)
-		newDy := float64(targetSize.Y) / float64(imgSize.Y)
-		op.GeoM.Scale(newDx, newDy)
-		op.GeoM.Translate(0, 0)
-		colorScale := float32(g.hitAnimation2) / float32(255)
-		op.ColorScale.SetR(colorScale)
-		op.ColorScale.SetG(colorScale)
-		op.ColorScale.SetB(colorScale)
-		op.ColorScale.SetA(colorScale)
-		screen.DrawImage(g.hitGood, op)
-	}
-
 	if g.w.Player2.State.Eq(PlayerStunned) {
 		g.DrawPlayer(g.player2Hit, g.ball2, g.health, &g.w.Player2)
 	} else {
@@ -329,7 +403,70 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.WorldToScreen(ball.Bounds.Diameter))
 	}
 
-	// draw debug geometry
+	// Draw instructional text.
+	var textHeight float64 = 50
+	g.DrawSprite2(g.textBackground, 0, float64(screen.Bounds().Dy())-textHeight, float64(screen.Bounds().Dx()), textHeight)
+	var message string
+	if g.state == GameOngoing {
+		message = "Defeat your opponent! Press WASD to move, left click to shoot, ESC to pause, R to restart."
+	} else if g.state == GamePaused {
+		message = "Press ESC to unpause."
+	} else if g.state == GameWon {
+		message = "You won, congratulations! Press R to play again."
+	} else if g.state == GameLost {
+		message = "You lost. Press R to play again."
+	} else {
+		Check(fmt.Errorf("unhandled game state: %d", g.state))
+	}
+
+	textSize := text.BoundString(g.defaultFont, message)
+	textX := screen.Bounds().Min.X + (screen.Bounds().Dx()-textSize.Dx())/2
+	textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2
+	text.Draw(screen, message, g.defaultFont, textX, textY, colorHex(0xee005a))
+
+	// Hit animations.
+	if g.hitAnimation1 > 0 {
+		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
+		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
+
+		op := &ebiten.DrawImageOptions{}
+		// Scale image to cover the entire screen.
+		imgSize := g.hit.Bounds().Size()
+		targetSize := screen.Bounds().Size()
+		targetSize.Y -= int(textHeight)
+		newDx := float64(targetSize.X) / float64(imgSize.X)
+		newDy := float64(targetSize.Y) / float64(imgSize.Y)
+		op.GeoM.Scale(newDx, newDy)
+		op.GeoM.Translate(0, 0)
+		colorScale := float32(g.hitAnimation1) / float32(255)
+		op.ColorScale.SetR(colorScale)
+		op.ColorScale.SetG(colorScale)
+		op.ColorScale.SetB(colorScale)
+		op.ColorScale.SetA(colorScale)
+		screen.DrawImage(g.hit, op)
+	}
+	if g.hitAnimation2 > 0 {
+		//col := color.RGBA{255, 0, 0, uint8(g.hitAnimation)}
+		//g.DrawFilledSquare(screen, Square{Pt{U(500), U(500)}, U(50)}, col)
+
+		op := &ebiten.DrawImageOptions{}
+		// Scale image to cover the entire screen.
+		imgSize := g.hitGood.Bounds().Size()
+		targetSize := screen.Bounds().Size()
+		targetSize.Y -= int(textHeight)
+		newDx := float64(targetSize.X) / float64(imgSize.X)
+		newDy := float64(targetSize.Y) / float64(imgSize.Y)
+		op.GeoM.Scale(newDx, newDy)
+		op.GeoM.Translate(0, 0)
+		colorScale := float32(g.hitAnimation2) / float32(255)
+		op.ColorScale.SetR(colorScale)
+		op.ColorScale.SetG(colorScale)
+		op.ColorScale.SetB(colorScale)
+		op.ColorScale.SetA(colorScale)
+		screen.DrawImage(g.hitGood, op)
+	}
+
+	// Debug geometry.
 	for i := range g.debugInfo {
 		info := g.GetDebugInfo(i)
 		for _, p := range info.Points {
@@ -381,6 +518,7 @@ type Game struct {
 	screen         *ebiten.Image
 	hit            *ebiten.Image
 	hitGood        *ebiten.Image
+	textBackground *ebiten.Image
 	data           GuiData
 	times          []time.Time
 	filledSquare   *ebiten.Image
@@ -393,7 +531,18 @@ type Game struct {
 	// relevant for it.
 	player1PreviousHealth Int
 	player2PreviousHealth Int
+	state                 GameState
+	defaultFont           font.Face
 }
+
+type GameState int64
+
+const (
+	GameOngoing GameState = iota
+	GamePaused
+	GameWon
+	GameLost
+)
 
 func loadImage(str string) *ebiten.Image {
 	file, err := os.Open(str)
@@ -455,6 +604,7 @@ func (g *Game) loadGuiData() {
 		g.background = loadImage("gui-data/background.png")
 		g.hit = loadImage("gui-data/hit.png")
 		g.hitGood = loadImage("gui-data/hit-good.png")
+		g.textBackground = loadImage("gui-data/text-background.png")
 		LoadJSON("gui-data/gui.json", &g.data)
 		if CheckFailed == nil {
 			break
@@ -505,6 +655,20 @@ func main() {
 	g.AddPainter(os.Args[2])
 	g.AddPainter(os.Args[3])
 	g.loadGuiData()
+	g.state = GameOngoing
+	{
+		// Load the Arial font
+		fontData, err := opentype.Parse(goregular.TTF)
+		Check(err)
+
+		g.defaultFont, err = opentype.NewFace(fontData, &opentype.FaceOptions{
+			Size:    24,
+			DPI:     72,
+			Hinting: font.HintingVertical,
+		})
+		Check(err)
+	}
+
 	err := ebiten.RunGame(&g)
 	Check(err)
 }

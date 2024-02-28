@@ -31,7 +31,10 @@ func main() {
 		if input.Player1Input.Reload || input.Player2Input.Reload {
 			loadWorld(&w)
 		}
-		w.Step(&input, frameIdx)
+
+		if !input.Player1Input.Pause && !input.Player2Input.Pause {
+			w.Step(&input, frameIdx)
+		}
 
 		guiProxy.SendPaintData(&w.DebugInfo) // Should not block.
 		player1.SendWorld(&w)                // Should not block.
@@ -70,6 +73,8 @@ type worldData struct {
 }
 
 func loadWorld(w *World) {
+	*w = World{} // Reset everything.
+
 	data := loadWorldData("world-data")
 
 	w.BallSpeed = I(data.BallSpeed)
