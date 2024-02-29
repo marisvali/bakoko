@@ -466,6 +466,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(g.hitGood, op)
 	}
 
+	if g.state == GameWon {
+		targetSizeX := float64(screen.Bounds().Size().X)
+		targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
+		g.DrawSprite2(g.won, 0, 0, targetSizeX, targetSizeY)
+	} else if g.state == GameLost {
+		targetSizeX := float64(screen.Bounds().Size().X)
+		targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
+		g.DrawSprite2(g.lost, 0, 0, targetSizeX, targetSizeY)
+	}
+
 	// Debug geometry.
 	for i := range g.debugInfo {
 		info := g.GetDebugInfo(i)
@@ -519,6 +529,8 @@ type Game struct {
 	hit            *ebiten.Image
 	hitGood        *ebiten.Image
 	textBackground *ebiten.Image
+	won            *ebiten.Image
+	lost           *ebiten.Image
 	data           GuiData
 	times          []time.Time
 	filledSquare   *ebiten.Image
@@ -605,6 +617,8 @@ func (g *Game) loadGuiData() {
 		g.hit = loadImage("gui-data/hit.png")
 		g.hitGood = loadImage("gui-data/hit-good.png")
 		g.textBackground = loadImage("gui-data/text-background.png")
+		g.won = loadImage("gui-data/won.png")
+		g.lost = loadImage("gui-data/lost.png")
 		LoadJSON("gui-data/gui.json", &g.data)
 		if CheckFailed == nil {
 			break
