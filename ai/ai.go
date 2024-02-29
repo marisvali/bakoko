@@ -30,6 +30,11 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 		return
 	}
 
+	// Check if us or the opponent is defeated.
+	if w.Player1.Health.Eq(ZERO) || w.Player2.Health.Eq(ZERO) {
+		return
+	}
+
 	// TODO: find a more generic way of selecting which body is which.
 	body := &w.Player2
 

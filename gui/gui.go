@@ -99,10 +99,12 @@ func (g *Game) UpdateGameOngoing() {
 
 	if g.w.Player1.Health.Eq(ZERO) {
 		g.state = GameLost
+		g.gameOverAnimation = -500
 	}
 
 	if g.w.Player2.Health.Eq(ZERO) {
 		g.state = GameWon
+		g.gameOverAnimation = -500
 	}
 }
 
@@ -139,7 +141,7 @@ func (g *Game) UpdateGameWon() {
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
 
 	playerInput := PlayerInput{}
-	playerInput.Pause = true
+	//playerInput.Pause = true
 
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
@@ -152,6 +154,13 @@ func (g *Game) UpdateGameWon() {
 		g.loadGuiData()
 	}
 	g.SyncWithWorld(playerInput)
+
+	if g.hitAnimation1 > 0 {
+		g.hitAnimation1 -= 10
+	}
+	if g.hitAnimation2 > 0 {
+		g.hitAnimation2 -= 10
+	}
 }
 
 func (g *Game) UpdateGameLost() {
@@ -160,7 +169,7 @@ func (g *Game) UpdateGameLost() {
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
 
 	playerInput := PlayerInput{}
-	playerInput.Pause = true
+	//playerInput.Pause = true
 
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
@@ -173,6 +182,13 @@ func (g *Game) UpdateGameLost() {
 		g.loadGuiData()
 	}
 	g.SyncWithWorld(playerInput)
+
+	if g.hitAnimation1 > 0 {
+		g.hitAnimation1 -= 10
+	}
+	if g.hitAnimation2 > 0 {
+		g.hitAnimation2 -= 10
+	}
 }
 
 func (g *Game) Update() error {
@@ -269,6 +285,28 @@ func (g *Game) DrawSprite2(img *ebiten.Image,
 	op.GeoM.Scale(newDx, newDy)
 
 	op.GeoM.Translate(x, y)
+
+	g.screen.DrawImage(img, op)
+}
+
+func (g *Game) DrawSprite3(img *ebiten.Image,
+	x float64, y float64, targetWidth float64, targetHeight float64, alpha float32) {
+	op := &ebiten.DrawImageOptions{}
+
+	// Resize image to fit the target size we want to draw.
+	// This kind of scaling is very useful during development when the final
+	// sizes are not decided, and thus it's impossible to have final sprites.
+	// For an actual release, scaling should be avoided.
+	imgSize := img.Bounds().Size()
+	newDx := targetWidth / float64(imgSize.X)
+	newDy := targetHeight / float64(imgSize.Y)
+	op.GeoM.Scale(newDx, newDy)
+
+	op.GeoM.Translate(x, y)
+	op.ColorScale.SetR(alpha)
+	op.ColorScale.SetG(alpha)
+	op.ColorScale.SetB(alpha)
+	op.ColorScale.SetA(alpha)
 
 	g.screen.DrawImage(img, op)
 }
@@ -466,14 +504,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(g.hitGood, op)
 	}
 
-	if g.state == GameWon {
-		targetSizeX := float64(screen.Bounds().Size().X)
-		targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
-		g.DrawSprite2(g.won, 0, 0, targetSizeX, targetSizeY)
-	} else if g.state == GameLost {
-		targetSizeX := float64(screen.Bounds().Size().X)
-		targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
-		g.DrawSprite2(g.lost, 0, 0, targetSizeX, targetSizeY)
+	if g.gameOverAnimation > 0 {
+		alpha := float32(g.gameOverAnimation) / 255
+		if g.state == GameWon {
+			targetSizeX := float64(screen.Bounds().Size().X)
+			targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
+			g.DrawSprite3(g.won, 0, 0, targetSizeX, targetSizeY, alpha)
+		} else if g.state == GameLost {
+			targetSizeX := float64(screen.Bounds().Size().X)
+			targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
+			g.DrawSprite3(g.lost, 0, 0, targetSizeX, targetSizeY, alpha)
+		}
+	}
+
+	if g.gameOverAnimation > -1000 && g.gameOverAnimation < 255 {
+		g.gameOverAnimation += 10
 	}
 
 	// Debug geometry.
@@ -545,6 +590,7 @@ type Game struct {
 	player2PreviousHealth Int
 	state                 GameState
 	defaultFont           font.Face
+	gameOverAnimation     int
 }
 
 type GameState int64
