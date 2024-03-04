@@ -74,37 +74,37 @@ func (g *Game) UpdateGameOngoing() {
 		playerInput.ShootPt.Y = g.ScreenToWorld(y)
 	}
 
-	g.SyncWithWorld(playerInput)
+	if g.SyncWithWorld(playerInput) {
+		// React to updates.
+		// Player1 was just hit.
+		if playerWasJustHit(g.w.Player1, g.player1PreviousHealth) {
+			g.hitAnimation1 = 255
+		}
+		g.player1PreviousHealth = g.w.Player1.Health
 
-	// React to updates.
-	// Player1 was just hit.
-	if playerWasJustHit(g.w.Player1, g.player1PreviousHealth) {
-		g.hitAnimation1 = 255
+		// Player2 was just hit.
+		if playerWasJustHit(g.w.Player2, g.player2PreviousHealth) {
+			g.hitAnimation2 = 255
+		}
+		g.player2PreviousHealth = g.w.Player2.Health
+
+		if g.w.Player1.Health.Eq(ZERO) {
+			g.state = GameLost
+			g.gameOverAnimation = -500
+		}
+
+		if g.w.Player2.Health.Eq(ZERO) {
+			g.state = GameWon
+			g.gameOverAnimation = -500
+		}
 	}
-	g.player1PreviousHealth = g.w.Player1.Health
 
 	if g.hitAnimation1 > 0 {
 		g.hitAnimation1 -= 10
 	}
 
-	// Player2 was just hit.
-	if playerWasJustHit(g.w.Player2, g.player2PreviousHealth) {
-		g.hitAnimation2 = 255
-	}
-	g.player2PreviousHealth = g.w.Player2.Health
-
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
-	}
-
-	if g.w.Player1.Health.Eq(ZERO) {
-		g.state = GameLost
-		g.gameOverAnimation = -500
-	}
-
-	if g.w.Player2.Health.Eq(ZERO) {
-		g.state = GameWon
-		g.gameOverAnimation = -500
 	}
 }
 
@@ -123,7 +123,16 @@ func (g *Game) UpdateGamePaused() {
 		g.state = GameOngoing
 	}
 
-	if slices.Contains(justPressedKeys, ebiten.KeyEscape) {
+	unpause := inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0)
+	unpauseKeys := []ebiten.Key{ebiten.KeyA, ebiten.KeyW, ebiten.KeyS, ebiten.KeyD}
+	for i := range unpauseKeys {
+		if slices.Contains(justPressedKeys, unpauseKeys[i]) {
+			unpause = true
+			break
+		}
+	}
+
+	if unpause {
 		playerInput.Pause = false
 		g.state = GameOngoing
 	}
@@ -153,6 +162,7 @@ func (g *Game) UpdateGameWon() {
 	if g.folderWatcher.FolderContentsChanged() {
 		g.loadGuiData()
 	}
+
 	g.SyncWithWorld(playerInput)
 
 	if g.hitAnimation1 > 0 {
@@ -181,6 +191,7 @@ func (g *Game) UpdateGameLost() {
 	if g.folderWatcher.FolderContentsChanged() {
 		g.loadGuiData()
 	}
+
 	g.SyncWithWorld(playerInput)
 
 	if g.hitAnimation1 > 0 {
@@ -204,23 +215,25 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) SyncWithWorld(input PlayerInput) {
+func (g *Game) SyncWithWorld(input PlayerInput) bool {
 	// Here I want to block but only if there's a connection.
 	// If a connection cannot be established, or the send or get fails, or
 	// there is a timeout, I want to go ahead.
 	// I will try to get the connection back at every update, but I don't want
 	// to permanently block my GUI if a connection cannot be established.
 	if err := g.worldProxy.Connect(); err != nil {
-		return // Nevermind, try again next frame.
+		return false // Nevermind, try again next frame.
 	}
 
 	if err := g.worldProxy.SendInput(&input); err != nil {
-		return // Nevermind, try again next frame.
+		return false // Nevermind, try again next frame.
 	}
 
 	if err := g.worldProxy.GetWorld(&g.w); err != nil {
-		return // Nevermind, try again next frame.
+		return false // Nevermind, try again next frame.
 	}
+
+	return true
 }
 
 //func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
@@ -446,9 +459,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawSprite2(g.textBackground, 0, float64(screen.Bounds().Dy())-textHeight, float64(screen.Bounds().Dx()), textHeight)
 	var message string
 	if g.state == GameOngoing {
-		message = "Defeat your opponent! Press WASD to move, left click to shoot, ESC to pause, R to restart."
+		message = "Defeat your opponent! Press WASD to move, left click to shoot, R to restart, ESC to pause, move or shoot to unpause."
 	} else if g.state == GamePaused {
-		message = "Press ESC to unpause."
+		message = "Defeat your opponent! Press WASD to move, left click to shoot, R to restart, ESC to pause, move or shoot to unpause."
 	} else if g.state == GameWon {
 		message = "You won, congratulations! Press R to play again."
 	} else if g.state == GameLost {
@@ -460,7 +473,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	textSize := text.BoundString(g.defaultFont, message)
 	textX := screen.Bounds().Min.X + (screen.Bounds().Dx()-textSize.Dx())/2
 	textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2
-	text.Draw(screen, message, g.defaultFont, textX, textY, colorHex(0xee005a))
+	text.Draw(screen, message, g.defaultFont, textX, textY, colorHex(0x000000))
+
+	if g.state == GamePaused {
+		message = "PAUSED"
+		xMargin := 60
+		textSize := text.BoundString(g.defaultFont, message)
+
+		textX1 := xMargin
+		textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2
+		text.Draw(screen, message, g.defaultFont, textX1, textY, colorHex(0xee005a))
+
+		textX2 := screen.Bounds().Min.X + (screen.Bounds().Dx() - textSize.Dx() - xMargin)
+		text.Draw(screen, message, g.defaultFont, textX2, textY, colorHex(0xee005a))
+	}
 
 	// Hit animations.
 	if g.hitAnimation1 > 0 {
@@ -715,7 +741,7 @@ func main() {
 	g.AddPainter(os.Args[2])
 	g.AddPainter(os.Args[3])
 	g.loadGuiData()
-	g.state = GameOngoing
+	g.state = GamePaused
 	{
 		// Load the Arial font
 		fontData, err := opentype.Parse(goregular.TTF)

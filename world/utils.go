@@ -21,18 +21,17 @@ func Check(e error) {
 	}
 }
 
-//func WriteFile(name string, data []byte) {
-//	name = "e:/" + name
-//	err := os.WriteFile(name, data, 0644)
-//	Check(err)
-//}
-//
-//func ReadFile(name string) []byte {
-//	name = "e:/" + name
-//	data, err := os.ReadFile(name)
-//	Check(err)
-//	return data
-//}
+func WriteFile(name string, data []byte) {
+	err := os.WriteFile(name, data, 0644)
+	Check(err)
+}
+
+func ReadFile(name string) []byte {
+	data, err := os.ReadFile(name)
+	Check(err)
+	return data
+}
+
 //
 //func TouchFile(name string) {
 //	name = "e:/" + name
