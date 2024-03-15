@@ -22,7 +22,7 @@ func mainRecord() {
 	guiProxy := GuiProxyTcpIp{}
 	guiProxy.Endpoint = "localhost:56903"
 
-	RunWorld(&w, &player1, &player2, &guiProxy, recordingFile)
+	RunWorldRecord(&w, &player1, &player2, &guiProxy, recordingFile)
 }
 
 //func mainReplay() {

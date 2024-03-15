@@ -7,7 +7,7 @@ import (
 	"playful-patterns.com/bakoko/world"
 )
 
-func RunWorld(w *world.World, player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
+func RunWorldRecord(w *world.World, player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
 	frameIdx := 0
 	var currentInputs []world.PlayerInput
 	var watcher world.FolderWatcher
@@ -23,6 +23,47 @@ func RunWorld(w *world.World, player1 PlayerProxy, player2 PlayerProxy, guiProxy
 
 		currentInputs = append(currentInputs, input.Player1Input)
 		serializeInputs(currentInputs, recordingFile)
+
+		if input.Player1Input.Reload || input.Player2Input.Reload {
+			loadWorld(w)
+		}
+
+		if !input.Player1Input.Pause && !input.Player2Input.Pause {
+			w.Step(&input, frameIdx)
+		}
+
+		guiProxy.SendPaintData(&w.DebugInfo) // Should not block.
+		player1.SendWorld(w)                 // Should not block.
+		player2.SendWorld(w)                 // Should not block.
+
+		if input.Player1Input.Quit || input.Player2Input.Quit {
+			break
+		}
+		frameIdx++
+		w.JustReloaded = ZERO
+	}
+}
+
+func RunWorldPlayback(w *world.World, player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, playbackFile string) {
+	playbackInputs := deserializeInputs(playbackFile)
+
+	frameIdx := 0
+	var currentInputs []world.PlayerInput
+	var watcher world.FolderWatcher
+	watcher.Folder = "world-data"
+	for w.Over.Eq(I(0)) {
+		if watcher.FolderContentsChanged() {
+			loadWorld(w)
+		}
+
+		var input world.Input
+		input.Player1Input = player1.GetInput() // Should block.
+		if frameIdx < len(playbackInputs) {
+			input.Player1Input = playbackInputs[frameIdx]
+		}
+		input.Player2Input = player2.GetInput() // Should block.
+
+		currentInputs = append(currentInputs, input.Player1Input)
 
 		if input.Player1Input.Reload || input.Player2Input.Reload {
 			loadWorld(w)
