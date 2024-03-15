@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+type GuiProxy interface {
+	SendPaintData(debugInfo *DebugInfo)
+}
+
+type GuiProxyRegular struct {
+}
+
+func (p *GuiProxyRegular) SendPaintData(debugInfo *DebugInfo) {
+}
+
 // This is an object that represents the gui, for a module that wants to draw
 // some graphics on it.
 // If someone wants to talk to the gui, they talk to this object
@@ -16,13 +26,13 @@ import (
 // This is meant to be used by the world and the AI module which acts in the
 // world.
 // This is a client that connects to a server.
-type GuiProxy struct {
+type GuiProxyTcpIp struct {
 	Endpoint string
 	conn     net.Conn
 }
 
 // Try to send an input to the peer, but don't block.
-func (p *GuiProxy) SendPaintData(debugInfo *DebugInfo) {
+func (p *GuiProxyTcpIp) SendPaintData(debugInfo *DebugInfo) {
 	// If we don't have a peer, connect to one.
 	if p.conn == nil {
 		var err error

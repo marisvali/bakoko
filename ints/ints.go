@@ -44,7 +44,7 @@ Advantages of deterministic simulations:
 - I have perfect debug information. I can re-create the same code execution on
 my machine, so I can recreate a bug and debug it.
 - I can refactor my simulation code easily. I need to create some playthroughs
-stored as a sequence of inputs, Then I run the playthroughs quickly without any
+stored as a sequence of inputs, Then I world-run the playthroughs quickly without any
 interface and check that the state of the world-main at the end is the same before
 and after any refactoring work.
 - I can have automated tests to protect against previous bugs.
@@ -63,7 +63,7 @@ Cons:
 my server and store on my server.
 - I don't have any insight on what my variables looked like during the
 playthrough, which would be nice for debugging or understanding things.
-- I can only analyze the video visually and manually, I can't run algorithms to
+- I can only analyze the video visually and manually, I can't world-run algorithms to
 extract metrics from it.
 
 Alternative 2: record world-main state. Either at each frame or every X frames.

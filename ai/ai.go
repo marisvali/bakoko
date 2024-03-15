@@ -1,8 +1,7 @@
-package main
+package ai
 
 import (
 	"image/color"
-	"os"
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
@@ -148,44 +147,6 @@ func pathIsClear(obstacles Matrix, obstacleSize Int, start Pt, end Pt, ballSize 
 	return !intersects
 }
 
-func main() {
-	var worldProxy WorldProxy
-	var guiProxy GuiProxy
-	var w World
-	var ai PlayerAI
-	ai.PauseBetweenShots = 1500 * time.Millisecond
-	ai.LastShot = time.Now()
-
-	worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
-	worldProxy.Timeout = 0 * time.Millisecond
-	guiProxy.Endpoint = os.Args[2]
-
-	for {
-		input := ai.Step(&w)
-
-		// This should block as the AI doesn't make sense if it doesn't
-		// synchronize with the simulation.
-		for {
-			if err := worldProxy.Connect(); err != nil {
-				continue // Retry from the beginning.
-			}
-
-			if err := worldProxy.SendInput(&input); err != nil {
-				continue // Retry from the beginning.
-			}
-
-			if err := worldProxy.GetWorld(&w); err != nil {
-				continue // Retry from the beginning.
-			}
-
-			break
-		}
-
-		// This may or may not block, who cares?
-		//guiProxy.SendPaintData(&ai.DebugInfo)
-	}
-}
-
 func obstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
 	for row := I(0); row.Lt(obstacles.NRows()); row.Inc() {
 		for col := I(0); col.Lt(obstacles.NCols()); col.Inc() {
@@ -248,5 +209,37 @@ func GetMatrixPointClosestToWorld(m Matrix, size Int, offset Pt, pos Pt) Pt {
 		} else {
 			distances[minIdx] = I(-1)
 		}
+	}
+}
+
+func RunAi(guiProxy GuiProxy, worldProxy WorldProxy) {
+	var w World
+	var ai PlayerAI
+	ai.PauseBetweenShots = 1500 * time.Millisecond
+	ai.LastShot = time.Now()
+
+	for {
+		input := ai.Step(&w)
+
+		// This should block as the AI doesn't make sense if it doesn't
+		// synchronize with the simulation.
+		for {
+			if err := worldProxy.Connect(); err != nil {
+				continue // Retry from the beginning.
+			}
+
+			if err := worldProxy.SendInput(&input); err != nil {
+				continue // Retry from the beginning.
+			}
+
+			if err := worldProxy.GetWorld(&w); err != nil {
+				continue // Retry from the beginning.
+			}
+
+			break
+		}
+
+		// This may or may not block, who cares?
+		//guiProxy.SendPaintData(&ai.DebugInfo)
 	}
 }

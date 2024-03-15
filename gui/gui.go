@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func playerWasJustHit(player Player, prevHealth Int) bool {
 	return player.Health.Lt(prevHealth)
 }
 
-func (g *Game) UpdateGameOngoing() {
+func (g *Gui) UpdateGameOngoing() {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -108,7 +108,7 @@ func (g *Game) UpdateGameOngoing() {
 	}
 }
 
-func (g *Game) UpdateGamePaused() {
+func (g *Gui) UpdateGamePaused() {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -144,7 +144,7 @@ func (g *Game) UpdateGamePaused() {
 	g.SyncWithWorld(playerInput)
 }
 
-func (g *Game) UpdateGameWon() {
+func (g *Gui) UpdateGameWon() {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -173,7 +173,7 @@ func (g *Game) UpdateGameWon() {
 	}
 }
 
-func (g *Game) UpdateGameLost() {
+func (g *Gui) UpdateGameLost() {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -202,7 +202,7 @@ func (g *Game) UpdateGameLost() {
 	}
 }
 
-func (g *Game) Update() error {
+func (g *Gui) Update() error {
 	if g.state == GameOngoing {
 		g.UpdateGameOngoing()
 	} else if g.state == GamePaused {
@@ -215,7 +215,7 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) SyncWithWorld(input PlayerInput) bool {
+func (g *Gui) SyncWithWorld(input PlayerInput) bool {
 	// Here I want to block but only if there's a connection.
 	// If a connection cannot be established, or the send or get fails, or
 	// there is a timeout, I want to go ahead.
@@ -242,15 +242,15 @@ func (g *Game) SyncWithWorld(input PlayerInput) bool {
 //	screen.DrawImage(img, op)
 //}
 
-func (g *Game) WorldToScreen(val Int) float64 {
+func (g *Gui) WorldToScreen(val Int) float64 {
 	return val.ToFloat64() / Unit * g.data.ScaleFactor
 }
 
-func (g *Game) ScreenToWorld(val int) Int {
+func (g *Gui) ScreenToWorld(val int) Int {
 	return U(int(float64(val) / g.data.ScaleFactor))
 }
 
-func (g *Game) DrawSprite(img *ebiten.Image,
+func (g *Gui) DrawSprite(img *ebiten.Image,
 	x float64, y float64, targetSize float64) {
 	op := &ebiten.DrawImageOptions{}
 
@@ -284,7 +284,7 @@ func (g *Game) DrawSprite(img *ebiten.Image,
 	//screen.DrawImage(dbgImg, op)
 }
 
-func (g *Game) DrawSprite2(img *ebiten.Image,
+func (g *Gui) DrawSprite2(img *ebiten.Image,
 	x float64, y float64, targetWidth float64, targetHeight float64) {
 	op := &ebiten.DrawImageOptions{}
 
@@ -302,7 +302,7 @@ func (g *Game) DrawSprite2(img *ebiten.Image,
 	g.screen.DrawImage(img, op)
 }
 
-func (g *Game) DrawSprite3(img *ebiten.Image,
+func (g *Gui) DrawSprite3(img *ebiten.Image,
 	x float64, y float64, targetWidth float64, targetHeight float64, alpha float32) {
 	op := &ebiten.DrawImageOptions{}
 
@@ -324,7 +324,7 @@ func (g *Game) DrawSprite3(img *ebiten.Image,
 	g.screen.DrawImage(img, op)
 }
 
-func (g *Game) DrawPlayer(
+func (g *Gui) DrawPlayer(
 	playerImage *ebiten.Image,
 	ballImage *ebiten.Image,
 	healthImage *ebiten.Image,
@@ -365,7 +365,7 @@ func (g *Game) DrawPlayer(
 	}
 }
 
-func (g *Game) DrawCircle(c Circle, color color.Color) {
+func (g *Gui) DrawCircle(c Circle, color color.Color) {
 	x := g.WorldToScreen(c.Center.X)
 	y := g.WorldToScreen(c.Center.Y)
 	r := g.WorldToScreen(c.Diameter) / 2
@@ -389,7 +389,7 @@ func DrawPixel(screen *ebiten.Image, x, y int, color color.Color) {
 	}
 }
 
-func (g *Game) DrawFilledSquare(screen *ebiten.Image, s Square, col color.Color) {
+func (g *Gui) DrawFilledSquare(screen *ebiten.Image, s Square, col color.Color) {
 	size := int(g.WorldToScreen(s.Size))
 	x1 := int(g.WorldToScreen(s.Center.X)) - size/2
 	y1 := int(g.WorldToScreen(s.Center.Y)) - size/2
@@ -410,7 +410,7 @@ func (g *Game) DrawFilledSquare(screen *ebiten.Image, s Square, col color.Color)
 	//screen.DrawImage(g.filledSquare, op)
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
+func (g *Gui) Draw(screen *ebiten.Image) {
 	g.screen = screen
 
 	// Background
@@ -566,7 +566,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.screen = nil
 }
 
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (g *Gui) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return outsideWidth, outsideHeight
 }
 
@@ -583,7 +583,7 @@ type GuiData struct {
 	DrawDebugGraphics bool
 }
 
-type Game struct {
+type Gui struct {
 	w              World
 	worldProxy     WorldProxy
 	painters       []PainterProxy
@@ -651,7 +651,7 @@ func loadImage(str string) *ebiten.Image {
 //	Check(err)
 //}
 //
-//func (g *Game) gameDataChangedOnDisk() bool {
+//func (g *Gui) gameDataChangedOnDisk() bool {
 //	files, err := os.ReadDir("gui-data")
 //	Check(err)
 //	if len(files) != len(g.times) {
@@ -669,7 +669,7 @@ func loadImage(str string) *ebiten.Image {
 //	return changed
 //}
 
-func (g *Game) loadGuiData() {
+func (g *Gui) loadGuiData() {
 	// Read from the disk over and over until a full read is possible.
 	// This repetition is meant to avoid crashes due to reading files
 	// while they are still being written.
@@ -703,58 +703,57 @@ func (g *Game) loadGuiData() {
 	ebiten.SetWindowPosition(10, 1080-10-g.data.WindowHeight)
 }
 
-func (g *Game) SetDebugInfo(i int, info DebugInfo) {
+func (g *Gui) SetDebugInfo(i int, info DebugInfo) {
 	g.debugInfoMutex[i].Lock()
 	g.debugInfo[i] = info.Clone() // Must to deep copy here.
 	g.debugInfoMutex[i].Unlock()
 }
 
-func (g *Game) GetDebugInfo(i int) DebugInfo {
+func (g *Gui) GetDebugInfo(i int) DebugInfo {
 	g.debugInfoMutex[i].Lock()
 	info := g.debugInfo[i].Clone() // Must to deep copy here.
 	g.debugInfoMutex[i].Unlock()
 	return info
 }
 
-func (g *Game) UpdateDebugInfo(i int) {
+func (g *Gui) UpdateDebugInfo(i int) {
 	for {
 		info := g.painters[i].GetPaintData() // Block.
 		g.SetDebugInfo(i, info)
 	}
 }
 
-func (g *Game) AddPainter(endpoint string) {
-	var p PainterProxy
+func (g *Gui) AddPainter(endpoint string) {
+	var p PainterProxyTcpIp
 	p.Endpoint = endpoint
-	g.painters = append(g.painters, p)
+	g.painters = append(g.painters, &p)
 	g.debugInfo = append(g.debugInfo, DebugInfo{})
 	g.debugInfoMutex = append(g.debugInfoMutex, sync.Mutex{})
 	i := len(g.painters) - 1
 	go g.UpdateDebugInfo(i)
 }
 
-func main() {
-	var g Game
+func RunGui(worldProxy WorldProxy) {
+	var g Gui
 	g.folderWatcher.Folder = "gui-data"
-	g.worldProxy.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
-	g.worldProxy.Timeout = 50000 * time.Millisecond
-	g.AddPainter(os.Args[2])
-	g.AddPainter(os.Args[3])
+	g.worldProxy = worldProxy
+	//g.AddPainter(os.Args[2])
+	//g.AddPainter(os.Args[3])
 	g.loadGuiData()
 	g.state = GamePaused
-	{
-		// Load the Arial font
-		fontData, err := opentype.Parse(goregular.TTF)
-		Check(err)
 
-		g.defaultFont, err = opentype.NewFace(fontData, &opentype.FaceOptions{
-			Size:    24,
-			DPI:     72,
-			Hinting: font.HintingVertical,
-		})
-		Check(err)
-	}
+	// Load the Arial font
+	fontData, err := opentype.Parse(goregular.TTF)
+	Check(err)
 
-	err := ebiten.RunGame(&g)
+	g.defaultFont, err = opentype.NewFace(fontData, &opentype.FaceOptions{
+		Size:    24,
+		DPI:     72,
+		Hinting: font.HintingVertical,
+	})
+	Check(err)
+
+	// Start the game.
+	err = ebiten.RunGame(&g)
 	Check(err)
 }

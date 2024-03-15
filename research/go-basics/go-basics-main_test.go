@@ -47,8 +47,30 @@ func Fib(n int) int {
 
 // from fib_test.go
 func BenchmarkFib10(b *testing.B) {
-	// run the Fib function b.N times
+	// world-run the Fib function b.N times
 	for n := 0; n < b.N; n++ {
 		Fib(10)
 	}
+}
+
+type Inter1 interface {
+	Some()
+}
+
+type Abel struct {
+	a int
+}
+
+func (p *Abel) Some() {
+	fmt.Println(p.a)
+}
+
+func TestInterfaces(t *testing.T) {
+	var x Inter1
+	var y Abel
+	y.a = 17
+	x = &y
+	x.Some()
+
+	assert.True(t, true)
 }

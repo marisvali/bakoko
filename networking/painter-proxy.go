@@ -6,6 +6,17 @@ import (
 	. "playful-patterns.com/bakoko/world"
 )
 
+type PainterProxy interface {
+	GetPaintData() (info DebugInfo)
+}
+
+type PainterProxyRegular struct {
+}
+
+func (p *PainterProxyRegular) GetPaintData() (info DebugInfo) {
+	return
+}
+
 // This is an object that represents an entity that wants to send some
 // graphics to be displayed (a painter).
 // If someone wants to talk to the painter, they talk to this object
@@ -15,12 +26,12 @@ import (
 // This is meant to be used by the gui which draws graphics sent by the world
 // and the AI.
 // This is a server that waits for a painter to connect to it.
-type PainterProxy struct {
+type PainterProxyTcpIp struct {
 	Endpoint string
 	conn     net.Conn
 }
 
-func (p *PainterProxy) GetPaintData() (info DebugInfo) {
+func (p *PainterProxyTcpIp) GetPaintData() (info DebugInfo) {
 	// Keep trying to get an input from a peer.
 	for {
 		// If we don't have a peer, wait until we get one.

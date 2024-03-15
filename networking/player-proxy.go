@@ -6,20 +6,42 @@ import (
 	. "playful-patterns.com/bakoko/world"
 )
 
-// This is an object that represents a player.
-// If someone wants to talk to the player, they talk to this object
-// and this object passes on information to the player.
-// The communication with the player so far is this:
+type PlayerProxy interface {
+	GetInput() PlayerInput
+	SendWorld(w *World)
+}
+
+type PlayerProxyRegular struct {
+	worldData  []byte
+	WorldProxy *WorldProxyRegular
+}
+
+func (p *PlayerProxyRegular) GetInput() PlayerInput {
+	// I have to block here until input is actually available.
+
+	// Get the input from the world proxy.
+	return p.WorldProxy.input
+}
+
+func (p *PlayerProxyRegular) SendWorld(w *World) {
+	// Store the world.
+	p.worldData = w.Serialize()
+}
+
+// This is an object that represents a PlayerProxy.
+// If someone wants to talk to the PlayerProxy, they talk to this object
+// and this object passes on information to the PlayerProxy.
+// The communication with the PlayerProxy so far is this:
 // - give me an input
 // - here's the world
 // This is meant to be used by the world which talks to to players.
-// This is a server that waits for a player to connect to it.
-type PlayerProxy struct {
+// This is a server that waits for a PlayerProxy to connect to it.
+type PlayerProxyTcpIp struct {
 	Endpoint string
 	conn     net.Conn
 }
 
-func (p *PlayerProxy) GetInput() PlayerInput {
+func (p *PlayerProxyTcpIp) GetInput() PlayerInput {
 	// Keep trying to get an input from a peer.
 	for {
 		// If we don't have a peer, wait until we get one.
@@ -53,7 +75,7 @@ func (p *PlayerProxy) GetInput() PlayerInput {
 }
 
 // Doesn't matter if this fails.
-func (p *PlayerProxy) SendWorld(w *World) {
+func (p *PlayerProxyTcpIp) SendWorld(w *World) {
 	// Don't do anything if we don't have a peer.
 	// The communication between us and the peer is always that:
 	// - the peer connects

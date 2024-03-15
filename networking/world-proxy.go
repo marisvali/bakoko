@@ -9,21 +9,51 @@ import (
 	"time"
 )
 
-// This is an object that represents the world, for a player module.
+// This is an object that represents the world, for a PlayerProxy module.
 // If someone wants to talk to the world, they talk to this object
 // and this object passes on information to the world.
 // The communication with the world so far is this:
 // - here's an input
 // - give me the world
-// This is meant to be used by player modules which act in the world.
+// This is meant to be used by PlayerProxy modules which act in the world.
 // This is a client that connects to a server.
-type WorldProxy struct {
+type WorldProxy interface {
+	Connect() error
+	SendInput(input *PlayerInput) error
+	GetWorld(w *World) error
+}
+
+// Regular
+type WorldProxyRegular struct {
+	input       PlayerInput
+	PlayerProxy *PlayerProxyRegular
+}
+
+func (p *WorldProxyRegular) Connect() error {
+	return nil
+}
+
+func (p *WorldProxyRegular) SendInput(input *PlayerInput) error {
+
+	// Store the input.
+	p.input = *input
+	return nil
+}
+
+func (p *WorldProxyRegular) GetWorld(w *World) error {
+	// Get the world from the player proxy.
+	w.Deserialize(bytes.NewBuffer(p.PlayerProxy.worldData))
+	return nil
+}
+
+// TCP IP
+type WorldProxyTcpIp struct {
 	Endpoint string
 	Timeout  time.Duration
 	conn     net.Conn
 }
 
-func (p *WorldProxy) Connect() error {
+func (p *WorldProxyTcpIp) Connect() error {
 	// If we already have a peer, move on.
 	if p.conn != nil {
 		return nil
@@ -47,7 +77,7 @@ func (p *WorldProxy) Connect() error {
 }
 
 // Try to send an input to the peer, but don't block.
-func (p *WorldProxy) SendInput(input *PlayerInput) error {
+func (p *WorldProxyTcpIp) SendInput(input *PlayerInput) error {
 	if p.conn == nil {
 		return errors.New("no connection")
 	}
@@ -69,7 +99,7 @@ func (p *WorldProxy) SendInput(input *PlayerInput) error {
 }
 
 // Try to get the world, but don't block if it doesn't work.
-func (p *WorldProxy) GetWorld(w *World) error {
+func (p *WorldProxyTcpIp) GetWorld(w *World) error {
 	if p.conn == nil {
 		return errors.New("no connection")
 	}
