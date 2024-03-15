@@ -17,15 +17,22 @@ func main() {
 	guiProxy := GuiProxyRegular{} // This isn't used yet.
 
 	worldProxy1 := WorldProxyRegular{}
-	worldProxy1.PlayerProxy = &player1
 	worldProxy2 := WorldProxyRegular{}
-	worldProxy2.PlayerProxy = &player2
 
-	player1.WorldProxy = &worldProxy1
-	player2.WorldProxy = &worldProxy2
-	//
-	//playerInputChannel1 := make(chan []byte)
-	//playerInputChannel2 := make(chan []byte)
+	playerInputChannel1 := make(chan []byte)
+	worldChannel1 := make(chan []byte)
+	playerInputChannel2 := make(chan []byte)
+	worldChannel2 := make(chan []byte)
+
+	player1.InputChannel = playerInputChannel1
+	worldProxy1.InputChannel = playerInputChannel1
+	player1.WorldChannel = worldChannel1
+	worldProxy1.WorldChannel = worldChannel1
+
+	player2.InputChannel = playerInputChannel2
+	worldProxy2.InputChannel = playerInputChannel2
+	player2.WorldChannel = worldChannel2
+	worldProxy2.WorldChannel = worldChannel2
 
 	go RunWorld(&w, &player1, &player2, &guiProxy, recordingFile)
 	go RunAi(&guiProxy, &worldProxy2)

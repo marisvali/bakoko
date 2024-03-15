@@ -12,20 +12,20 @@ type PlayerProxy interface {
 }
 
 type PlayerProxyRegular struct {
-	worldData  []byte
-	WorldProxy *WorldProxyRegular
+	WorldChannel chan []byte
+	InputChannel chan []byte
 }
 
 func (p *PlayerProxyRegular) GetInput() PlayerInput {
-	// I have to block here until input is actually available.
-
-	// Get the input from the world proxy.
-	return p.WorldProxy.input
+	data := <-p.InputChannel
+	var input PlayerInput
+	Deserialize(bytes.NewBuffer(data), &input)
+	return input
 }
 
 func (p *PlayerProxyRegular) SendWorld(w *World) {
-	// Store the world.
-	p.worldData = w.Serialize()
+	data := w.Serialize()
+	p.WorldChannel <- data
 }
 
 // This is an object that represents a PlayerProxy.

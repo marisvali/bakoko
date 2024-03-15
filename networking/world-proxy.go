@@ -25,8 +25,8 @@ type WorldProxy interface {
 
 // Regular
 type WorldProxyRegular struct {
-	input       PlayerInput
-	PlayerProxy *PlayerProxyRegular
+	WorldChannel chan []byte
+	InputChannel chan []byte
 }
 
 func (p *WorldProxyRegular) Connect() error {
@@ -34,15 +34,15 @@ func (p *WorldProxyRegular) Connect() error {
 }
 
 func (p *WorldProxyRegular) SendInput(input *PlayerInput) error {
-
-	// Store the input.
-	p.input = *input
+	buf := new(bytes.Buffer)
+	Serialize(buf, input)
+	p.InputChannel <- buf.Bytes()
 	return nil
 }
 
 func (p *WorldProxyRegular) GetWorld(w *World) error {
-	// Get the world from the player proxy.
-	w.Deserialize(bytes.NewBuffer(p.PlayerProxy.worldData))
+	data := <-p.WorldChannel
+	w.Deserialize(bytes.NewBuffer(data))
 	return nil
 }
 
