@@ -1,15 +1,17 @@
 package main
 
 import (
+	"fmt"
 	. "playful-patterns.com/bakoko/ai"
 	. "playful-patterns.com/bakoko/gui"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
 	. "playful-patterns.com/bakoko/world/world-run"
+	"time"
 )
 
 func main() {
-	mainPlayback()
+	mainRecord()
 }
 
 func mainPlayback() {
@@ -43,9 +45,21 @@ func mainPlayback() {
 	RunGui(&worldProxy1)
 }
 
+func getNewRecordingFile() string {
+	date := time.Now()
+	for i := 0; i < 1000000; i++ {
+		filename := fmt.Sprintf("recordings/recorded-inputs-%04d-%02d-%02d-%06d",
+			date.Year(), date.Month(), date.Day(), i)
+		if !FileExists(filename) {
+			return filename
+		}
+	}
+	panic("Cannot record, no available filename found.")
+}
+
 func mainRecord() {
 	var w World
-	recordingFile := "recorded-inputs-01"
+	recordingFile := getNewRecordingFile()
 
 	player1 := PlayerProxyRegular{}
 	player2 := PlayerProxyRegular{}

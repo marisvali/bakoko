@@ -32,6 +32,13 @@ func ReadFile(name string) []byte {
 	return data
 }
 
+func FileExists(name string) bool {
+	if _, err := os.Stat(name); err == nil {
+		return true
+	}
+	return false
+}
+
 //
 //func TouchFile(name string) {
 //	name = "e:/" + name
