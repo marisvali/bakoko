@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	. "playful-patterns.com/bakoko/ai"
 	. "playful-patterns.com/bakoko/gui"
 	. "playful-patterns.com/bakoko/networking"
@@ -11,12 +12,15 @@ import (
 )
 
 func main() {
-	mainRecord()
+	if len(os.Args) == 1 {
+		mainRecord()
+	} else {
+		mainPlayback(os.Args[1])
+	}
 }
 
-func mainPlayback() {
+func mainPlayback(recordingFile string) {
 	var w World
-	recordingFile := "recorded-inputs-01"
 
 	player1 := PlayerProxyRegular{}
 	player2 := PlayerProxyRegular{}
