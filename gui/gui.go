@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -173,6 +174,75 @@ func (g *Gui) UpdateGameWon() {
 	}
 }
 
+func (g *Gui) UpdatePlayback() {
+	// Get keyboard input.
+	var justPressedKeys []ebiten.Key
+	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
+
+	//if slices.Contains(justPressedKeys, ebiten.KeyEscape) {
+	//	g.state = GamePaused
+	//}
+
+	// Get mouse input.
+	g.leftButtonClicked = inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0)
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
+		g.leftButtonPressed = true
+	}
+	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButton0) {
+		g.leftButtonPressed = false
+	}
+	g.mousePosX, g.mousePosY = ebiten.CursorPosition()
+
+	if g.folderWatcher.FolderContentsChanged() {
+		g.loadGuiData()
+	}
+
+	if g.targetFrame >= 0 {
+		// Rewind.
+		var initialPlayerInput PlayerInput
+		initialPlayerInput.Reload = true
+		initialPlayerInput.Pause = true
+		g.SyncWithWorld(initialPlayerInput)
+		for i := 0; i < g.targetFrame; i++ {
+			g.SyncWithWorld(g.playerInputs[i])
+		}
+		g.frameIdx = g.targetFrame
+
+		g.player1PreviousHealth = g.w.Player1.Health
+		g.player2PreviousHealth = g.w.Player2.Health
+		g.targetFrame = -1
+	}
+
+	var playerInput PlayerInput
+	if g.frameIdx < len(g.playerInputs) {
+		playerInput = g.playerInputs[g.frameIdx]
+	}
+	g.frameIdx++
+
+	if g.SyncWithWorld(playerInput) {
+		// React to updates.
+		// Player1 was just hit.
+		if playerWasJustHit(g.w.Player1, g.player1PreviousHealth) {
+			g.hitAnimation1 = 255
+		}
+		g.player1PreviousHealth = g.w.Player1.Health
+
+		// Player2 was just hit.
+		if playerWasJustHit(g.w.Player2, g.player2PreviousHealth) {
+			g.hitAnimation2 = 255
+		}
+		g.player2PreviousHealth = g.w.Player2.Health
+	}
+
+	if g.hitAnimation1 > 0 {
+		g.hitAnimation1 -= 10
+	}
+
+	if g.hitAnimation2 > 0 {
+		g.hitAnimation2 -= 10
+	}
+}
+
 func (g *Gui) UpdateGameLost() {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
@@ -211,6 +281,8 @@ func (g *Gui) Update() error {
 		g.UpdateGameWon()
 	} else if g.state == GameLost {
 		g.UpdateGameLost()
+	} else if g.state == Playback {
+		g.UpdatePlayback()
 	}
 	return nil
 }
@@ -456,7 +528,10 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 
 	// Draw instructional text.
 	var textHeight float64 = 50
-	g.DrawSprite2(g.textBackground, 0, float64(screen.Bounds().Dy())-textHeight, float64(screen.Bounds().Dx()), textHeight)
+	g.DrawSprite2(g.textBackground, 0,
+		float64(screen.Bounds().Dy())-textHeight-float64(g.data.PlaybackBarHeight),
+		float64(screen.Bounds().Dx()),
+		textHeight)
 	var message string
 	if g.state == GameOngoing {
 		message = "Defeat your opponent! Press WASD to move, left click to shoot, R to restart, ESC to pause, move or shoot to unpause."
@@ -466,13 +541,15 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 		message = "You won, congratulations! Press R to play again."
 	} else if g.state == GameLost {
 		message = "You lost. Press R to play again."
+	} else if g.state == Playback {
+		message = fmt.Sprintf("Playing back frame %d / %d", g.frameIdx, len(g.playerInputs))
 	} else {
 		Check(fmt.Errorf("unhandled game state: %d", g.state))
 	}
 
 	textSize := text.BoundString(g.defaultFont, message)
 	textX := screen.Bounds().Min.X + (screen.Bounds().Dx()-textSize.Dx())/2
-	textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2
+	textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2 - g.data.PlaybackBarHeight
 	text.Draw(screen, message, g.defaultFont, textX, textY, colorHex(0x000000))
 
 	if g.state == GamePaused {
@@ -481,7 +558,7 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 		textSize := text.BoundString(g.defaultFont, message)
 
 		textX1 := xMargin
-		textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2
+		textY := screen.Bounds().Max.Y - (int(textHeight)-textSize.Dy())/2 - g.data.PlaybackBarHeight
 		text.Draw(screen, message, g.defaultFont, textX1, textY, colorHex(0xee005a))
 
 		textX2 := screen.Bounds().Min.X + (screen.Bounds().Dx() - textSize.Dx() - xMargin)
@@ -497,7 +574,7 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 		// Scale image to cover the entire screen.
 		imgSize := g.hit.Bounds().Size()
 		targetSize := screen.Bounds().Size()
-		targetSize.Y -= int(textHeight)
+		targetSize.Y -= int(textHeight) - g.data.PlaybackBarHeight
 		newDx := float64(targetSize.X) / float64(imgSize.X)
 		newDy := float64(targetSize.Y) / float64(imgSize.Y)
 		op.GeoM.Scale(newDx, newDy)
@@ -517,7 +594,7 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 		// Scale image to cover the entire screen.
 		imgSize := g.hitGood.Bounds().Size()
 		targetSize := screen.Bounds().Size()
-		targetSize.Y -= int(textHeight)
+		targetSize.Y -= int(textHeight) - g.data.PlaybackBarHeight
 		newDx := float64(targetSize.X) / float64(imgSize.X)
 		newDy := float64(targetSize.Y) / float64(imgSize.Y)
 		op.GeoM.Scale(newDx, newDy)
@@ -534,17 +611,21 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 		alpha := float32(g.gameOverAnimation) / 255
 		if g.state == GameWon {
 			targetSizeX := float64(screen.Bounds().Size().X)
-			targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
+			targetSizeY := float64(screen.Bounds().Size().Y) - textHeight - float64(g.data.PlaybackBarHeight)
 			g.DrawSprite3(g.won, 0, 0, targetSizeX, targetSizeY, alpha)
 		} else if g.state == GameLost {
 			targetSizeX := float64(screen.Bounds().Size().X)
-			targetSizeY := float64(screen.Bounds().Size().Y) - textHeight
+			targetSizeY := float64(screen.Bounds().Size().Y) - textHeight - float64(g.data.PlaybackBarHeight)
 			g.DrawSprite3(g.lost, 0, 0, targetSizeX, targetSizeY, alpha)
 		}
 	}
 
 	if g.gameOverAnimation > -1000 && g.gameOverAnimation < 255 {
 		g.gameOverAnimation += 10
+	}
+
+	if g.state == Playback {
+		g.DrawPlaybackBar(screen)
 	}
 
 	// Debug geometry.
@@ -566,11 +647,45 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 	g.screen = nil
 }
 
-func (g *Gui) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return outsideWidth, outsideHeight
+func (g *Gui) DrawPlaybackBar(screen *ebiten.Image) {
+	g.DrawSprite2(
+		g.textBackground, 0,
+		float64(screen.Bounds().Dy()-g.data.PlaybackBarHeight),
+		float64(screen.Bounds().Dx()),
+		float64(g.data.PlaybackBarHeight))
+
+	if g.leftButtonPressed {
+		g.DrawSprite(
+			g.ball1,
+			float64(g.mousePosX),
+			float64(g.mousePosY),
+			30)
+	}
+
+	var x, y, width, height float64
+	x = 10
+	y = float64(screen.Bounds().Dy()-g.data.PlaybackBarHeight) + 10
+	width = float64(screen.Bounds().Dx()) - 300
+	height = float64(g.data.PlaybackBarHeight) - 20
+	mx, my := float64(g.mousePosX), float64(g.mousePosY)
+
+	g.DrawSprite2(g.health, x, y, width, height)
+	if g.leftButtonClicked &&
+		mx >= x && mx <= (x+width) &&
+		my >= y && my <= (y+height) {
+		g.DrawSprite(
+			g.ball2,
+			float64(g.mousePosX),
+			float64(g.mousePosY),
+			30)
+
+		factor := (mx - x) / width
+		g.targetFrame = int(factor * float64(len(g.playerInputs)))
+	}
 }
 
-func init() {
+func (g *Gui) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return outsideWidth, outsideHeight
 }
 
 type GuiData struct {
@@ -581,6 +696,7 @@ type GuiData struct {
 	PlayerOffsetY     float64
 	PlayerOffsetSize  float64
 	DrawDebugGraphics bool
+	PlaybackBarHeight int
 }
 
 type Gui struct {
@@ -617,6 +733,13 @@ type Gui struct {
 	state                 GameState
 	defaultFont           font.Face
 	gameOverAnimation     int
+	playerInputs          []PlayerInput
+	frameIdx              int
+	leftButtonClicked     bool
+	leftButtonPressed     bool
+	mousePosX             int
+	mousePosY             int
+	targetFrame           int
 }
 
 type GameState int64
@@ -626,6 +749,7 @@ const (
 	GamePaused
 	GameWon
 	GameLost
+	Playback
 )
 
 func loadImage(str string) *ebiten.Image {
@@ -691,7 +815,12 @@ func (g *Gui) loadGuiData() {
 		g.textBackground = loadImage("gui-data/text-background.png")
 		g.won = loadImage("gui-data/won.png")
 		g.lost = loadImage("gui-data/lost.png")
-		LoadJSON("gui-data/gui.json", &g.data)
+		if g.state == Playback {
+			LoadJSON("gui-data/gui-playback.json", &g.data)
+		} else {
+			LoadJSON("gui-data/gui.json", &g.data)
+		}
+
 		if CheckFailed == nil {
 			break
 		}
@@ -733,14 +862,21 @@ func (g *Gui) AddPainter(endpoint string) {
 	go g.UpdateDebugInfo(i)
 }
 
-func RunGui(worldProxy WorldProxy) {
-	var g Gui
+func (g *Gui) Init(worldProxy WorldProxy, recordingFile string) {
+	g.frameIdx = 0
+	g.targetFrame = -1
+	if recordingFile == "" {
+		g.state = GamePaused
+	} else {
+		g.state = Playback
+		g.playerInputs = deserializeInputs(recordingFile)
+	}
+
 	g.folderWatcher.Folder = "gui-data"
 	g.worldProxy = worldProxy
 	//g.AddPainter(os.Args[2])
 	//g.AddPainter(os.Args[3])
 	g.loadGuiData()
-	g.state = GamePaused
 
 	// Load the Arial font
 	fontData, err := opentype.Parse(goregular.TTF)
@@ -752,8 +888,32 @@ func RunGui(worldProxy WorldProxy) {
 		Hinting: font.HintingVertical,
 	})
 	Check(err)
+}
+
+func deserializeInputs(filename string) []PlayerInput {
+	var inputs []PlayerInput
+	buf := bytes.NewBuffer(ReadFile(filename))
+	var lenInputs Int
+	Deserialize(buf, &lenInputs)
+	inputs = make([]PlayerInput, lenInputs.ToInt64())
+	Deserialize(buf, inputs)
+	return inputs
+}
+
+func RunGui(worldProxy WorldProxy) {
+	var g Gui
+	g.Init(worldProxy, "")
 
 	// Start the game.
-	err = ebiten.RunGame(&g)
+	err := ebiten.RunGame(&g)
+	Check(err)
+}
+
+func RunGuiPlayback(worldProxy WorldProxy, recordingFile string) {
+	var g Gui
+	g.Init(worldProxy, recordingFile)
+
+	// Start the game.
+	err := ebiten.RunGame(&g)
 	Check(err)
 }

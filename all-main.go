@@ -46,7 +46,7 @@ func mainPlayback(recordingFile string) {
 
 	go RunWorldPlayback(&w, &player1, &player2, &guiProxy, recordingFile)
 	go RunAi(&guiProxy, &worldProxy2)
-	RunGui(&worldProxy1)
+	RunGuiPlayback(&worldProxy1, recordingFile)
 }
 
 func getNewRecordingFile() string {
@@ -87,7 +87,7 @@ func mainRecord() {
 	player2.WorldChannel = worldChannel2
 	worldProxy2.WorldChannel = worldChannel2
 
-	go RunWorldRecord(&w, &player1, &player2, &guiProxy, recordingFile)
+	go RunWorldPlayback(&w, &player1, &player2, &guiProxy, recordingFile)
 	go RunAi(&guiProxy, &worldProxy2)
 	RunGui(&worldProxy1)
 }
