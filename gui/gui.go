@@ -301,7 +301,8 @@ func (g *Gui) SyncWithWorld(input PlayerInput) bool {
 		return false // Nevermind, try again next frame.
 	}
 
-	if err := g.worldProxy.GetWorld(&g.w); err != nil {
+	var err error
+	if g.w, err = g.worldProxy.GetWorld(); err != nil {
 		return false // Nevermind, try again next frame.
 	}
 
@@ -700,7 +701,7 @@ type GuiData struct {
 }
 
 type Gui struct {
-	w              World
+	w              *World
 	worldProxy     WorldProxy
 	painters       []PainterProxy
 	player1        *ebiten.Image

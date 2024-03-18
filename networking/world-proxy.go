@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"net"
+	"playful-patterns.com/bakoko/ai"
+	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/world"
 	"time"
 )
@@ -20,30 +22,52 @@ import (
 type WorldProxy interface {
 	Connect() error
 	SendInput(input *PlayerInput) error
-	GetWorld(w *World) error
+	GetWorld() (w *World, err error)
 }
 
 // Regular
-type WorldProxyRegular struct {
-	WorldChannel chan []byte
-	InputChannel chan []byte
+type WorldProxyPlayback struct {
+	w        World
+	ai       ai.PlayerAI
+	frameIdx int
+	watcher  FolderWatcher
 }
 
-func (p *WorldProxyRegular) Connect() error {
+func (p *WorldProxyPlayback) Connect() error {
+	p.ai.PauseBetweenShots = 1500 * time.Millisecond
+	p.ai.LastShot = time.Now()
+	p.frameIdx = 0
+	p.watcher.Folder = "world-data"
 	return nil
 }
 
-func (p *WorldProxyRegular) SendInput(input *PlayerInput) error {
-	buf := new(bytes.Buffer)
-	Serialize(buf, input)
-	p.InputChannel <- buf.Bytes()
+func (p *WorldProxyPlayback) SendInput(player1Input *PlayerInput) error {
+	if p.watcher.FolderContentsChanged() {
+		LoadWorld(&p.w)
+	}
+
+	var input Input
+	input.Player1Input = *player1Input
+	input.Player2Input = p.ai.Step(&p.w)
+
+	if input.Player1Input.Reload || input.Player2Input.Reload {
+		LoadWorld(&p.w)
+	}
+
+	if !input.Player1Input.Pause && !input.Player2Input.Pause {
+		p.w.Step(&input, p.frameIdx)
+	}
+
+	//p.guiProxy.SendPaintData(&w.DebugInfo) // Should not block.
+	p.frameIdx++
+	p.w.JustReloaded = ZERO
 	return nil
 }
 
-func (p *WorldProxyRegular) GetWorld(w *World) error {
-	data := <-p.WorldChannel
-	w.Deserialize(bytes.NewBuffer(data))
-	return nil
+func (p *WorldProxyPlayback) GetWorld() (w *World, err error) {
+	w = &p.w
+	err = nil
+	return
 }
 
 // TCP IP
@@ -99,9 +123,9 @@ func (p *WorldProxyTcpIp) SendInput(input *PlayerInput) error {
 }
 
 // Try to get the world, but don't block if it doesn't work.
-func (p *WorldProxyTcpIp) GetWorld(w *World) error {
+func (p *WorldProxyTcpIp) GetWorld() (w *World, err error) {
 	if p.conn == nil {
-		return errors.New("no connection")
+		return nil, errors.New("no connection")
 	}
 
 	data, err := ReadData(p.conn)
@@ -110,9 +134,10 @@ func (p *WorldProxyTcpIp) GetWorld(w *World) error {
 	if err != nil {
 		p.conn = nil
 		log.Println("lost connection (3)")
-		return err
+		return nil, err
 	}
 
+	w = &World{}
 	w.Deserialize(bytes.NewBuffer(data))
-	return nil
+	return w, nil
 }

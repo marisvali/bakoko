@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	. "playful-patterns.com/bakoko/ai"
+	. "playful-patterns.com/bakoko/ai/ai-run"
 	. "playful-patterns.com/bakoko/networking"
 	"time"
 )

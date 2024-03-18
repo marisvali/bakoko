@@ -11,23 +11,6 @@ type PlayerProxy interface {
 	SendWorld(w *World)
 }
 
-type PlayerProxyRegular struct {
-	WorldChannel chan []byte
-	InputChannel chan []byte
-}
-
-func (p *PlayerProxyRegular) GetInput() PlayerInput {
-	data := <-p.InputChannel
-	var input PlayerInput
-	Deserialize(bytes.NewBuffer(data), &input)
-	return input
-}
-
-func (p *PlayerProxyRegular) SendWorld(w *World) {
-	data := w.Serialize()
-	p.WorldChannel <- data
-}
-
 // This is an object that represents a PlayerProxy.
 // If someone wants to talk to the PlayerProxy, they talk to this object
 // and this object passes on information to the PlayerProxy.
