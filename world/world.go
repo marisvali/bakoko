@@ -120,6 +120,23 @@ type PlayerInput struct {
 	Pause     bool
 }
 
+func SerializeInputs(inputs []PlayerInput, filename string) {
+	buf := new(bytes.Buffer)
+	Serialize(buf, int64(len(inputs)))
+	Serialize(buf, inputs)
+	WriteFile(filename, buf.Bytes())
+}
+
+func DeserializeInputs(filename string) []PlayerInput {
+	var inputs []PlayerInput
+	buf := bytes.NewBuffer(ReadFile(filename))
+	var lenInputs Int
+	Deserialize(buf, &lenInputs)
+	inputs = make([]PlayerInput, lenInputs.ToInt64())
+	Deserialize(buf, inputs)
+	return inputs
+}
+
 type Input struct {
 	Player1Input PlayerInput
 	Player2Input PlayerInput

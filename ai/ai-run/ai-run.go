@@ -8,13 +8,13 @@ import (
 )
 
 func RunAi(guiProxy GuiProxy, worldProxy WorldProxy) {
-	var w World
+	var w *World
 	var ai PlayerAI
 	ai.PauseBetweenShots = 1500 * time.Millisecond
 	ai.LastShot = time.Now()
 
 	for {
-		input := ai.Step(&w)
+		input := ai.Step(w)
 
 		// This should block as the AI doesn't make sense if it doesn't
 		// synchronize with the simulation.
@@ -27,7 +27,8 @@ func RunAi(guiProxy GuiProxy, worldProxy WorldProxy) {
 				continue // Retry from the beginning.
 			}
 
-			if err := worldProxy.GetWorld(&w); err != nil {
+			var err error
+			if w, err = worldProxy.GetWorld(); err != nil {
 				continue // Retry from the beginning.
 			}
 

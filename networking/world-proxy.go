@@ -27,21 +27,28 @@ type WorldProxy interface {
 
 // Regular
 type WorldProxyPlayback struct {
-	w        World
-	ai       ai.PlayerAI
-	frameIdx int
-	watcher  FolderWatcher
+	w             World
+	ai            ai.PlayerAI
+	frameIdx      int
+	watcher       FolderWatcher
+	RecordingFile string
+	currentInputs []PlayerInput
+	initialized   bool
 }
 
 func (p *WorldProxyPlayback) Connect() error {
-	p.ai.PauseBetweenShots = 1500 * time.Millisecond
-	p.ai.LastShot = time.Now()
-	p.frameIdx = 0
-	p.watcher.Folder = "world-data"
 	return nil
 }
 
 func (p *WorldProxyPlayback) SendInput(player1Input *PlayerInput) error {
+	if !p.initialized {
+		p.ai.PauseBetweenShots = 1500 * time.Millisecond
+		p.ai.LastShot = time.Now()
+		p.frameIdx = 0
+		p.watcher.Folder = "world-data"
+		p.initialized = true
+	}
+
 	if p.watcher.FolderContentsChanged() {
 		LoadWorld(&p.w)
 	}
@@ -49,6 +56,12 @@ func (p *WorldProxyPlayback) SendInput(player1Input *PlayerInput) error {
 	var input Input
 	input.Player1Input = *player1Input
 	input.Player2Input = p.ai.Step(&p.w)
+	p.w.JustReloaded = ZERO
+
+	if p.RecordingFile != "" {
+		p.currentInputs = append(p.currentInputs, input.Player1Input)
+		SerializeInputs(p.currentInputs, p.RecordingFile)
+	}
 
 	if input.Player1Input.Reload || input.Player2Input.Reload {
 		LoadWorld(&p.w)
@@ -60,7 +73,6 @@ func (p *WorldProxyPlayback) SendInput(player1Input *PlayerInput) error {
 
 	//p.guiProxy.SendPaintData(&w.DebugInfo) // Should not block.
 	p.frameIdx++
-	p.w.JustReloaded = ZERO
 	return nil
 }
 

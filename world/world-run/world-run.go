@@ -1,7 +1,6 @@
 package world_run
 
 import (
-	"bytes"
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
@@ -22,7 +21,7 @@ func RunWorldRecord(w *World, player1 PlayerProxy, player2 PlayerProxy, guiProxy
 		input.Player2Input = player2.GetInput() // Should block.
 
 		currentInputs = append(currentInputs, input.Player1Input)
-		serializeInputs(currentInputs, recordingFile)
+		SerializeInputs(currentInputs, recordingFile)
 
 		if input.Player1Input.Reload || input.Player2Input.Reload {
 			LoadWorld(w)
@@ -45,7 +44,7 @@ func RunWorldRecord(w *World, player1 PlayerProxy, player2 PlayerProxy, guiProxy
 }
 
 func RunWorldPlayback(w *World, player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, playbackFile string) {
-	playbackInputs := deserializeInputs(playbackFile)
+	playbackInputs := DeserializeInputs(playbackFile)
 
 	frameIdx := 0
 	var currentInputs []PlayerInput
@@ -83,21 +82,4 @@ func RunWorldPlayback(w *World, player1 PlayerProxy, player2 PlayerProxy, guiPro
 		frameIdx++
 		w.JustReloaded = ZERO
 	}
-}
-
-func serializeInputs(inputs []PlayerInput, filename string) {
-	buf := new(bytes.Buffer)
-	Serialize(buf, int64(len(inputs)))
-	Serialize(buf, inputs)
-	WriteFile(filename, buf.Bytes())
-}
-
-func deserializeInputs(filename string) []PlayerInput {
-	var inputs []PlayerInput
-	buf := bytes.NewBuffer(ReadFile(filename))
-	var lenInputs Int
-	Deserialize(buf, &lenInputs)
-	inputs = make([]PlayerInput, lenInputs.ToInt64())
-	Deserialize(buf, inputs)
-	return inputs
 }
