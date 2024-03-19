@@ -241,6 +241,16 @@ func (g *Gui) UpdatePlayback() {
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
 	}
+
+	// Update the AI if there is one.
+	if g.aiRunner != nil {
+		g.aiRunner.Step()
+	}
+
+	// Update the world if there is one.
+	if g.worldRunner != nil {
+		g.worldRunner.Step()
+	}
 }
 
 func (g *Gui) UpdateGameLost() {
@@ -297,12 +307,12 @@ func (g *Gui) SyncWithWorld(input PlayerInput) bool {
 		return false // Nevermind, try again next frame.
 	}
 
-	if err := g.worldProxy.SendInput(&input); err != nil {
+	var err error
+	if g.w, err = g.worldProxy.GetWorld(); err != nil {
 		return false // Nevermind, try again next frame.
 	}
 
-	var err error
-	if g.w, err = g.worldProxy.GetWorld(); err != nil {
+	if err = g.worldProxy.SendInput(&input); err != nil {
 		return false // Nevermind, try again next frame.
 	}
 
@@ -741,6 +751,8 @@ type Gui struct {
 	mousePosX             int
 	mousePosY             int
 	targetFrame           int
+	worldRunner           *WorldRunner
+	aiRunner              *AiRunner
 }
 
 type GameState int64
@@ -863,7 +875,11 @@ func (g *Gui) AddPainter(endpoint string) {
 	go g.UpdateDebugInfo(i)
 }
 
-func (g *Gui) Init(worldProxy WorldProxy, recordingFile string) {
+func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner, aiRunner *AiRunner, recordingFile string) {
+	g.worldProxy = worldProxy
+	g.worldRunner = worldRunner
+	g.aiRunner = aiRunner
+
 	g.frameIdx = 0
 	g.targetFrame = -1
 	if recordingFile == "" {
@@ -874,7 +890,6 @@ func (g *Gui) Init(worldProxy WorldProxy, recordingFile string) {
 	}
 
 	g.folderWatcher.Folder = "gui-data"
-	g.worldProxy = worldProxy
 	//g.AddPainter(os.Args[2])
 	//g.AddPainter(os.Args[3])
 	g.loadGuiData()
@@ -903,16 +918,23 @@ func deserializeInputs(filename string) []PlayerInput {
 
 func RunGui(worldProxy WorldProxy) {
 	var g Gui
-	g.Init(worldProxy, "")
+	g.Init(worldProxy, nil, nil, "")
 
 	// Start the game.
 	err := ebiten.RunGame(&g)
 	Check(err)
 }
 
-func RunGuiPlayback(worldProxy WorldProxy, recordingFile string) {
+func RunGuiPlayback(recordingFile string) {
+	var worldAiProxy WorldPlayerProxy  // Connects the world and AI.
+	var worldGuiProxy WorldPlayerProxy // Connects the world and GUI.
+	var worldRunner WorldRunner
+	var aiRunner AiRunner
+	aiRunner.Initialize(&worldAiProxy)
+	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy)
+
 	var g Gui
-	g.Init(worldProxy, recordingFile)
+	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, recordingFile)
 
 	// Start the game.
 	err := ebiten.RunGame(&g)

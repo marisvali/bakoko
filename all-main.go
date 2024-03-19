@@ -4,22 +4,16 @@ import (
 	"fmt"
 	"os"
 	. "playful-patterns.com/bakoko/gui"
-	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
 	"time"
 )
 
 func main() {
 	if len(os.Args) == 1 {
-		mainRecord()
+		//..
 	} else {
-		mainPlayback(os.Args[1])
+		RunGuiPlayback(os.Args[1])
 	}
-}
-
-func mainPlayback(recordingFile string) {
-	worldProxy := WorldProxyPlayback{}
-	RunGuiPlayback(&worldProxy, recordingFile)
 }
 
 func getNewRecordingFile() string {
@@ -32,11 +26,4 @@ func getNewRecordingFile() string {
 		}
 	}
 	panic("Cannot record, no available filename found.")
-}
-
-func mainRecord() {
-	recordingFile := getNewRecordingFile()
-	worldProxy := WorldProxyPlayback{}
-	worldProxy.RecordingFile = recordingFile
-	RunGui(&worldProxy)
 }
