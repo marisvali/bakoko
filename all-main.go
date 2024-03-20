@@ -10,9 +10,10 @@ import (
 
 func main() {
 	if len(os.Args) == 1 {
-		RunGuiPlay()
+		RunGuiFusedPlay(getNewRecordingFile())
 	} else {
-		RunGuiPlayback(os.Args[1])
+		//RunGuiFusedPlayback(os.Args[1])
+		RunGuiFusedPlayback("d:/gms/bakoko/recordings/recorded-inputs-2024-03-20-000000")
 	}
 }
 

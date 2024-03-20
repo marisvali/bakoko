@@ -977,32 +977,32 @@ func RunGui(worldProxy WorldProxy) {
 	Check(err)
 }
 
-func RunGuiPlayback(recordingFile string) {
+func RunGuiFusedPlay(recordingFile string) {
 	var worldAiProxy WorldPlayerProxy  // Connects the world and AI.
 	var worldGuiProxy WorldPlayerProxy // Connects the world and GUI.
 	var worldRunner WorldRunner
 	var aiRunner AiRunner
 	aiRunner.Initialize(&worldAiProxy)
-	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy)
+	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy, recordingFile)
 
 	var g Gui
-	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, recordingFile)
+	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, "")
 
 	// Start the game.
 	err := ebiten.RunGame(&g)
 	Check(err)
 }
 
-func RunGuiPlay() {
+func RunGuiFusedPlayback(recordingFile string) {
 	var worldAiProxy WorldPlayerProxy  // Connects the world and AI.
 	var worldGuiProxy WorldPlayerProxy // Connects the world and GUI.
 	var worldRunner WorldRunner
 	var aiRunner AiRunner
 	aiRunner.Initialize(&worldAiProxy)
-	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy)
+	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy, "")
 
 	var g Gui
-	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, "")
+	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, recordingFile)
 
 	// Start the game.
 	err := ebiten.RunGame(&g)

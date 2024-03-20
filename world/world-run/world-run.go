@@ -10,15 +10,16 @@ type WorldRunner struct {
 	w             World
 	frameIdx      int
 	watcher       FolderWatcher
-	RecordingFile string
+	recordingFile string
 	currentInputs []PlayerInput
 	player1       PlayerProxy
 	player2       PlayerProxy
 }
 
-func (wr *WorldRunner) Initialize(player1 PlayerProxy, player2 PlayerProxy) {
+func (wr *WorldRunner) Initialize(player1 PlayerProxy, player2 PlayerProxy, recordingFile string) {
 	wr.frameIdx = 0
 	wr.watcher.Folder = "world-data"
+	wr.recordingFile = recordingFile
 	wr.player1 = player1
 	wr.player2 = player2
 	wr.player1.SendWorld(&wr.w) // Should not block.
@@ -30,9 +31,9 @@ func (wr *WorldRunner) Step() {
 	input.Player1Input = wr.player1.GetInput() // Should block.
 	input.Player2Input = wr.player2.GetInput() // Should block.
 
-	if wr.RecordingFile != "" {
+	if wr.recordingFile != "" {
 		wr.currentInputs = append(wr.currentInputs, input.Player1Input)
-		SerializeInputs(wr.currentInputs, wr.RecordingFile)
+		SerializeInputs(wr.currentInputs, wr.recordingFile)
 	}
 
 	// Only change the world in this well defined part. This way, the players
@@ -62,7 +63,7 @@ func (wr *WorldRunner) Step() {
 
 func RunWorldRecord(player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
 	var worldRunner WorldRunner
-	worldRunner.Initialize(player1, player2)
+	worldRunner.Initialize(player1, player2, recordingFile)
 	for worldRunner.w.Over.Eq(I(0)) {
 		worldRunner.Step()
 	}
