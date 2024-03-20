@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if len(os.Args) == 1 {
-		//..
+		RunGuiPlay()
 	} else {
 		RunGuiPlayback(os.Args[1])
 	}

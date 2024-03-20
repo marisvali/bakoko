@@ -6,80 +6,64 @@ import (
 	. "playful-patterns.com/bakoko/world"
 )
 
-func RunWorldRecord(w *World, player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
-	frameIdx := 0
-	var currentInputs []PlayerInput
-	var watcher FolderWatcher
-	watcher.Folder = "world-data"
-	for w.Over.Eq(I(0)) {
-		if watcher.FolderContentsChanged() {
-			LoadWorld(w)
-		}
-
-		var input Input
-		input.Player1Input = player1.GetInput() // Should block.
-		input.Player2Input = player2.GetInput() // Should block.
-
-		currentInputs = append(currentInputs, input.Player1Input)
-		SerializeInputs(currentInputs, recordingFile)
-
-		if input.Player1Input.Reload || input.Player2Input.Reload {
-			LoadWorld(w)
-		}
-
-		if !input.Player1Input.Pause && !input.Player2Input.Pause {
-			w.Step(&input, frameIdx)
-		}
-
-		guiProxy.SendPaintData(&w.DebugInfo) // Should not block.
-		player1.SendWorld(w)                 // Should not block.
-		player2.SendWorld(w)                 // Should not block.
-
-		if input.Player1Input.Quit || input.Player2Input.Quit {
-			break
-		}
-		frameIdx++
-		w.JustReloaded = ZERO
-	}
+type WorldRunner struct {
+	w             World
+	frameIdx      int
+	watcher       FolderWatcher
+	RecordingFile string
+	currentInputs []PlayerInput
+	player1       PlayerProxy
+	player2       PlayerProxy
 }
 
-func RunWorldPlayback(w *World, player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, playbackFile string) {
-	playbackInputs := DeserializeInputs(playbackFile)
+func (wr *WorldRunner) Initialize(player1 PlayerProxy, player2 PlayerProxy) {
+	wr.frameIdx = 0
+	wr.watcher.Folder = "world-data"
+	wr.player1 = player1
+	wr.player2 = player2
+	wr.player1.SendWorld(&wr.w) // Should not block.
+	wr.player2.SendWorld(&wr.w) // Should not block.
+}
 
-	frameIdx := 0
-	var currentInputs []PlayerInput
-	var watcher FolderWatcher
-	watcher.Folder = "world-data"
-	for w.Over.Eq(I(0)) {
-		if watcher.FolderContentsChanged() {
-			LoadWorld(w)
-		}
+func (wr *WorldRunner) Step() {
+	var input Input
+	input.Player1Input = wr.player1.GetInput() // Should block.
+	input.Player2Input = wr.player2.GetInput() // Should block.
 
-		var input Input
-		input.Player1Input = player1.GetInput() // Should block.
-		if frameIdx < len(playbackInputs) {
-			input.Player1Input = playbackInputs[frameIdx]
-		}
-		input.Player2Input = player2.GetInput() // Should block.
+	if wr.RecordingFile != "" {
+		wr.currentInputs = append(wr.currentInputs, input.Player1Input)
+		SerializeInputs(wr.currentInputs, wr.RecordingFile)
+	}
 
-		currentInputs = append(currentInputs, input.Player1Input)
+	// Only change the world in this well defined part. This way, the players
+	// can get pointers to our world data and use them without making copies
+	// of the world, because the world remains unchanged between when we send
+	// the world to a player and we get the input from that player.
+	// !!! Start changing the world.
+	wr.w.JustReloaded = ZERO
+	if input.Player1Input.Reload || input.Player2Input.Reload || wr.watcher.FolderContentsChanged() {
+		LoadWorld(&wr.w)
+	}
 
-		if input.Player1Input.Reload || input.Player2Input.Reload {
-			LoadWorld(w)
-		}
+	if !input.Player1Input.Pause && !input.Player2Input.Pause {
+		wr.w.Step(&input, wr.frameIdx)
+	}
+	// !!! Stop changing the world.
 
-		if !input.Player1Input.Pause && !input.Player2Input.Pause {
-			w.Step(&input, frameIdx)
-		}
+	//guiProxy.SendPaintData(&world.DebugInfo) // Should not block.
+	wr.player1.SendWorld(&wr.w) // Should not block.
+	wr.player2.SendWorld(&wr.w) // Should not block.
 
-		guiProxy.SendPaintData(&w.DebugInfo) // Should not block.
-		player1.SendWorld(w)                 // Should not block.
-		player2.SendWorld(w)                 // Should not block.
+	//if input.Player1Input.Quit || input.Player2Input.Quit {
+	//	break
+	//}
+	wr.frameIdx++
+}
 
-		if input.Player1Input.Quit || input.Player2Input.Quit {
-			break
-		}
-		frameIdx++
-		w.JustReloaded = ZERO
+func RunWorldRecord(player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
+	var worldRunner WorldRunner
+	worldRunner.Initialize(player1, player2)
+	for worldRunner.w.Over.Eq(I(0)) {
+		worldRunner.Step()
 	}
 }

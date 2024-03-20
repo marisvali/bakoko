@@ -2,11 +2,8 @@ package main
 
 import (
 	. "playful-patterns.com/bakoko/networking"
-	. "playful-patterns.com/bakoko/world"
 	. "playful-patterns.com/bakoko/world/world-run"
 )
-
-var w World
 
 func main() {
 	mainRecord()
@@ -22,7 +19,7 @@ func mainRecord() {
 	guiProxy := GuiProxyTcpIp{}
 	guiProxy.Endpoint = "localhost:56903"
 
-	RunWorldRecord(&w, &player1, &player2, &guiProxy, recordingFile)
+	RunWorldRecord(&player1, &player2, &guiProxy, recordingFile)
 }
 
 //func mainReplay() {

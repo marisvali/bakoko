@@ -38,7 +38,6 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 	if w.JustReloaded.Eq(ONE) {
 		// Reset target if the world just reloaded.
 		mind.HasTarget = false
-
 	}
 
 	if time.Now().Sub(mind.LastShot) > mind.PauseBetweenShots {

@@ -7,35 +7,60 @@ import (
 	"time"
 )
 
-func RunAi(guiProxy GuiProxy, worldProxy WorldProxy) {
-	var w *World
-	var ai PlayerAI
-	ai.PauseBetweenShots = 1500 * time.Millisecond
-	ai.LastShot = time.Now()
+type AiRunner struct {
+	ai         PlayerAI
+	worldProxy WorldProxy
+}
 
+func (ar *AiRunner) Initialize(worldProxy WorldProxy) {
+	ar.worldProxy = worldProxy
+	ar.ai.PauseBetweenShots = 1500 * time.Millisecond
+	ar.ai.LastShot = time.Now()
+}
+
+func (ar *AiRunner) GetWorld() *World {
+	// This should block as the AI doesn't make sense if it doesn't
+	// synchronize with the simulation.
 	for {
-		input := ai.Step(w)
-
-		// This should block as the AI doesn't make sense if it doesn't
-		// synchronize with the simulation.
-		for {
-			if err := worldProxy.Connect(); err != nil {
-				continue // Retry from the beginning.
-			}
-
-			if err := worldProxy.SendInput(&input); err != nil {
-				continue // Retry from the beginning.
-			}
-
-			var err error
-			if w, err = worldProxy.GetWorld(); err != nil {
-				continue // Retry from the beginning.
-			}
-
-			break
+		if err := ar.worldProxy.Connect(); err != nil {
+			continue // Retry from the beginning.
 		}
+		var err error
+		var w *World
+		if w, err = ar.worldProxy.GetWorld(); err != nil {
+			continue // Retry from the beginning.
+		}
+		return w
+	}
+}
 
-		// This may or may not block, who cares?
-		//guiProxy.SendPaintData(&ai.DebugInfo)
+func (ar *AiRunner) SendInput(input *PlayerInput) {
+	// This should block as the AI doesn't make sense if it doesn't
+	// synchronize with the simulation.
+	for {
+		if err := ar.worldProxy.Connect(); err != nil {
+			continue // Retry from the beginning.
+		}
+		if err := ar.worldProxy.SendInput(input); err != nil {
+			continue // Retry from the beginning.
+		}
+		break
+	}
+}
+
+func (ar *AiRunner) Step() {
+	w := ar.GetWorld()
+	input := ar.ai.Step(w)
+	ar.SendInput(&input)
+
+	// This may or may not block, who cares?
+	//guiProxy.SendPaintData(&ai.DebugInfo)
+}
+
+func RunAi(guiProxy GuiProxy, worldProxy WorldProxy) {
+	var aiRunner AiRunner
+	aiRunner.Initialize(worldProxy)
+	for {
+		aiRunner.Step()
 	}
 }

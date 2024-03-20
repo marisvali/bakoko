@@ -14,9 +14,11 @@ import (
 	"image/color"
 	"math"
 	"os"
+	. "playful-patterns.com/bakoko/ai/ai-run"
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
+	. "playful-patterns.com/bakoko/world/world-run"
 	"slices"
 	"sync"
 	"time"
@@ -107,6 +109,16 @@ func (g *Gui) UpdateGameOngoing() {
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
 	}
+
+	// Update the AI if there is one.
+	if g.aiRunner != nil {
+		g.aiRunner.Step()
+	}
+
+	// Update the world if there is one.
+	if g.worldRunner != nil {
+		g.worldRunner.Step()
+	}
 }
 
 func (g *Gui) UpdateGamePaused() {
@@ -143,6 +155,26 @@ func (g *Gui) UpdateGamePaused() {
 	}
 
 	g.SyncWithWorld(playerInput)
+
+	// Update the AI if there is one.
+	if g.aiRunner != nil {
+		g.aiRunner.Step()
+	}
+
+	// Update the world if there is one.
+	if g.worldRunner != nil {
+		g.worldRunner.Step()
+	}
+
+	// Update the AI if there is one.
+	if g.aiRunner != nil {
+		g.aiRunner.Step()
+	}
+
+	// Update the world if there is one.
+	if g.worldRunner != nil {
+		g.worldRunner.Step()
+	}
 }
 
 func (g *Gui) UpdateGameWon() {
@@ -171,6 +203,16 @@ func (g *Gui) UpdateGameWon() {
 	}
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
+	}
+
+	// Update the AI if there is one.
+	if g.aiRunner != nil {
+		g.aiRunner.Step()
+	}
+
+	// Update the world if there is one.
+	if g.worldRunner != nil {
+		g.worldRunner.Step()
 	}
 }
 
@@ -279,6 +321,16 @@ func (g *Gui) UpdateGameLost() {
 	}
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
+	}
+
+	// Update the AI if there is one.
+	if g.aiRunner != nil {
+		g.aiRunner.Step()
+	}
+
+	// Update the world if there is one.
+	if g.worldRunner != nil {
+		g.worldRunner.Step()
 	}
 }
 
@@ -935,6 +987,22 @@ func RunGuiPlayback(recordingFile string) {
 
 	var g Gui
 	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, recordingFile)
+
+	// Start the game.
+	err := ebiten.RunGame(&g)
+	Check(err)
+}
+
+func RunGuiPlay() {
+	var worldAiProxy WorldPlayerProxy  // Connects the world and AI.
+	var worldGuiProxy WorldPlayerProxy // Connects the world and GUI.
+	var worldRunner WorldRunner
+	var aiRunner AiRunner
+	aiRunner.Initialize(&worldAiProxy)
+	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy)
+
+	var g Gui
+	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, "")
 
 	// Start the game.
 	err := ebiten.RunGame(&g)
