@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// 3 possible run modes: FusedRecording, FusedPlayback, SplitRecording
+// Run the AI in SplitRecording mode.
 func main() {
 	var worldProxy WorldProxyTcpIp
 	var guiProxy GuiProxyTcpIp
@@ -16,16 +18,12 @@ func main() {
 	worldProxy.Timeout = 0 * time.Millisecond
 	guiProxy.Endpoint = os.Args[2]
 
-	RunAiSplitPlay(&guiProxy, &worldProxy)
-}
-
-func RunAiSplitPlay(guiProxy GuiProxy, worldProxy WorldProxy) {
 	var ai PlayerAI
 	ai.Initialize()
 	for {
-		w := getWorld(worldProxy)
+		w := getWorld(&worldProxy)
 		input := ai.Step(w)
-		sendInput(worldProxy, &input)
+		sendInput(&worldProxy, &input)
 
 		// This may or may not block, who cares?
 		//guiProxy.SendPaintData(&Ai.DebugInfo)

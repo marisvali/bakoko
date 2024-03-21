@@ -6,11 +6,9 @@ import (
 	. "playful-patterns.com/bakoko/world/world-run"
 )
 
+// 3 possible run modes: FusedRecording, FusedPlayback, SplitRecording
+// Run the world in SplitRecording mode.
 func main() {
-	mainRecord()
-}
-
-func mainRecord() {
 	player1 := PlayerProxyTcpIp{}
 	player1.Endpoint = "localhost:56901"
 	player2 := PlayerProxyTcpIp{}
@@ -18,12 +16,8 @@ func mainRecord() {
 	guiProxy := GuiProxyTcpIp{}
 	guiProxy.Endpoint = "localhost:56903"
 
-	RunWorldSplitPlay(&player1, &player2, &guiProxy, GetNewRecordingFile())
-}
-
-func RunWorldSplitPlay(player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
 	var worldRunner WorldRunner
-	worldRunner.Initialize(recordingFile)
+	worldRunner.Initialize(GetNewRecordingFile())
 	for {
 		// First, send the current world to players and get their reactions.
 		var input Input
