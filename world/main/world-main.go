@@ -23,12 +23,12 @@ func mainRecord() {
 
 func RunWorldSplitPlay(player1 PlayerProxy, player2 PlayerProxy, guiProxy GuiProxy, recordingFile string) {
 	var worldRunner WorldRunner
-	worldRunner.Initialize(player1, player2, recordingFile)
+	worldRunner.Initialize(recordingFile)
 	for {
 		// First, send the current world to players and get their reactions.
 		var input Input
-		input.Player1Input = player1.SendWorldGetInput(&worldRunner.w) // Blocks.
-		input.Player2Input = player2.SendWorldGetInput(&worldRunner.w) // Blocks.
+		input.Player1Input = *player1.SendWorldGetInput(worldRunner.GetWorld()) // Blocks.
+		input.Player2Input = *player2.SendWorldGetInput(worldRunner.GetWorld()) // Blocks.
 
 		// Second, use their reactions to update the world.
 		worldRunner.Step(input)

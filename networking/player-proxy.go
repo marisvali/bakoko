@@ -10,7 +10,7 @@ type PlayerProxy interface {
 	// Should block until both have happened for the same player:
 	// - the world has been sent successfully
 	// - the reaction has been received successfully
-	SendWorldGetInput(w *World) PlayerInput
+	SendWorldGetInput(w *World) *PlayerInput
 }
 
 // This is an object that represents a PlayerProxy.
