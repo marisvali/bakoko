@@ -14,7 +14,7 @@ import (
 	"image/color"
 	"math"
 	"os"
-	. "playful-patterns.com/bakoko/ai/ai-run"
+	. "playful-patterns.com/bakoko/ai"
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
@@ -43,7 +43,7 @@ func playerWasJustHit(player Player, prevHealth Int) bool {
 	return player.Health.Lt(prevHealth)
 }
 
-func (g *Gui) UpdateGameOngoing() {
+func (g *Gui) UpdateGameOngoing(world *World) PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -77,26 +77,26 @@ func (g *Gui) UpdateGameOngoing() {
 		playerInput.ShootPt.Y = g.ScreenToWorld(y)
 	}
 
-	if g.SyncWithWorld(playerInput) {
+	if world != nil {
 		// React to updates.
 		// Player1 was just hit.
-		if playerWasJustHit(g.w.Player1, g.player1PreviousHealth) {
+		if playerWasJustHit(world.Player1, g.player1PreviousHealth) {
 			g.hitAnimation1 = 255
 		}
-		g.player1PreviousHealth = g.w.Player1.Health
+		g.player1PreviousHealth = world.Player1.Health
 
 		// Player2 was just hit.
-		if playerWasJustHit(g.w.Player2, g.player2PreviousHealth) {
+		if playerWasJustHit(world.Player2, g.player2PreviousHealth) {
 			g.hitAnimation2 = 255
 		}
-		g.player2PreviousHealth = g.w.Player2.Health
+		g.player2PreviousHealth = world.Player2.Health
 
-		if g.w.Player1.Health.Eq(ZERO) {
+		if world.Player1.Health.Eq(ZERO) {
 			g.state = GameLost
 			g.gameOverAnimation = -500
 		}
 
-		if g.w.Player2.Health.Eq(ZERO) {
+		if world.Player2.Health.Eq(ZERO) {
 			g.state = GameWon
 			g.gameOverAnimation = -500
 		}
@@ -110,18 +110,10 @@ func (g *Gui) UpdateGameOngoing() {
 		g.hitAnimation2 -= 10
 	}
 
-	// Update the AI if there is one.
-	if g.aiRunner != nil {
-		g.aiRunner.Step()
-	}
-
-	// Update the world if there is one.
-	if g.worldRunner != nil {
-		g.worldRunner.Step()
-	}
+	return playerInput
 }
 
-func (g *Gui) UpdateGamePaused() {
+func (g *Gui) UpdateGamePaused() PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -154,30 +146,10 @@ func (g *Gui) UpdateGamePaused() {
 		g.loadGuiData()
 	}
 
-	g.SyncWithWorld(playerInput)
-
-	// Update the AI if there is one.
-	if g.aiRunner != nil {
-		g.aiRunner.Step()
-	}
-
-	// Update the world if there is one.
-	if g.worldRunner != nil {
-		g.worldRunner.Step()
-	}
-
-	// Update the AI if there is one.
-	if g.aiRunner != nil {
-		g.aiRunner.Step()
-	}
-
-	// Update the world if there is one.
-	if g.worldRunner != nil {
-		g.worldRunner.Step()
-	}
+	return playerInput
 }
 
-func (g *Gui) UpdateGameWon() {
+func (g *Gui) UpdateGameWon() PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -196,27 +168,16 @@ func (g *Gui) UpdateGameWon() {
 		g.loadGuiData()
 	}
 
-	g.SyncWithWorld(playerInput)
-
 	if g.hitAnimation1 > 0 {
 		g.hitAnimation1 -= 10
 	}
 	if g.hitAnimation2 > 0 {
 		g.hitAnimation2 -= 10
 	}
-
-	// Update the AI if there is one.
-	if g.aiRunner != nil {
-		g.aiRunner.Step()
-	}
-
-	// Update the world if there is one.
-	if g.worldRunner != nil {
-		g.worldRunner.Step()
-	}
+	return playerInput
 }
 
-func (g *Gui) UpdatePlayback() {
+func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 	// Get keyboard input.
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
@@ -239,21 +200,21 @@ func (g *Gui) UpdatePlayback() {
 		g.loadGuiData()
 	}
 
-	if g.targetFrame >= 0 {
-		// Rewind.
-		var initialPlayerInput PlayerInput
-		initialPlayerInput.Reload = true
-		initialPlayerInput.Pause = true
-		g.SyncWithWorld(initialPlayerInput)
-		for i := 0; i < g.targetFrame; i++ {
-			g.SyncWithWorld(g.playerInputs[i])
-		}
-		g.frameIdx = g.targetFrame
-
-		g.player1PreviousHealth = g.w.Player1.Health
-		g.player2PreviousHealth = g.w.Player2.Health
-		g.targetFrame = -1
-	}
+	//if g.targetFrame >= 0 {
+	//	// Rewind.
+	//	var initialPlayerInput PlayerInput
+	//	initialPlayerInput.Reload = true
+	//	initialPlayerInput.Pause = true
+	//	g.SyncWithWorld(initialPlayerInput)
+	//	for i := 0; i < g.targetFrame; i++ {
+	//		g.SyncWithWorld(g.playerInputs[i])
+	//	}
+	//	g.frameIdx = g.targetFrame
+	//
+	//	g.player1PreviousHealth = g.w.Player1.Health
+	//	g.player2PreviousHealth = g.w.Player2.Health
+	//	g.targetFrame = -1
+	//}
 
 	var playerInput PlayerInput
 	if g.frameIdx < len(g.playerInputs) {
@@ -261,19 +222,19 @@ func (g *Gui) UpdatePlayback() {
 	}
 	g.frameIdx++
 
-	if g.SyncWithWorld(playerInput) {
+	if world != nil {
 		// React to updates.
 		// Player1 was just hit.
-		if playerWasJustHit(g.w.Player1, g.player1PreviousHealth) {
+		if playerWasJustHit(world.Player1, g.player1PreviousHealth) {
 			g.hitAnimation1 = 255
 		}
-		g.player1PreviousHealth = g.w.Player1.Health
+		g.player1PreviousHealth = world.Player1.Health
 
 		// Player2 was just hit.
-		if playerWasJustHit(g.w.Player2, g.player2PreviousHealth) {
+		if playerWasJustHit(world.Player2, g.player2PreviousHealth) {
 			g.hitAnimation2 = 255
 		}
-		g.player2PreviousHealth = g.w.Player2.Health
+		g.player2PreviousHealth = world.Player2.Health
 	}
 
 	if g.hitAnimation1 > 0 {
@@ -284,18 +245,10 @@ func (g *Gui) UpdatePlayback() {
 		g.hitAnimation2 -= 10
 	}
 
-	// Update the AI if there is one.
-	if g.aiRunner != nil {
-		g.aiRunner.Step()
-	}
-
-	// Update the world if there is one.
-	if g.worldRunner != nil {
-		g.worldRunner.Step()
-	}
+	return playerInput
 }
 
-func (g *Gui) UpdateGameLost() {
+func (g *Gui) UpdateGameLost() PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -314,8 +267,6 @@ func (g *Gui) UpdateGameLost() {
 		g.loadGuiData()
 	}
 
-	g.SyncWithWorld(playerInput)
-
 	if g.hitAnimation1 > 0 {
 		g.hitAnimation1 -= 10
 	}
@@ -323,52 +274,80 @@ func (g *Gui) UpdateGameLost() {
 		g.hitAnimation2 -= 10
 	}
 
-	// Update the AI if there is one.
-	if g.aiRunner != nil {
-		g.aiRunner.Step()
-	}
+	return playerInput
+}
 
+func (g *Gui) GetWorld() *World {
+	// Get the world.
+	if g.fusedMode {
+		return g.worldRunner.GetWorld()
+	} else {
+		// Here I want to block but only if there's a connection.
+		// If a connection cannot be established, or the send or get fails, or
+		// there is a timeout, I want to go ahead.
+		// I will try to get the connection back at every update, but I don't want
+		// to permanently block my GUI if a connection cannot be established.
+		if err := g.worldProxy.Connect(); err != nil {
+			return nil // Nevermind, try again next frame.
+		}
+
+		w, err := g.worldProxy.GetWorld()
+		if err != nil {
+			return nil // Nevermind, try again next frame.
+		}
+		return w
+	}
+}
+
+func (g *Gui) SendInput(playerInput PlayerInput) {
 	// Update the world if there is one.
-	if g.worldRunner != nil {
-		g.worldRunner.Step()
+	if g.fusedMode {
+		var input Input
+		input.Player1Input = playerInput
+
+		// Step the AI player.
+		input.Player2Input = g.player2Ai.Step(g.w)
+
+		// Now, step the world.
+		g.worldRunner.Step(input)
+	} else {
+		// Here I want to block but only if there's a connection.
+		// If a connection cannot be established, or the send or get fails, or
+		// there is a timeout, I want to go ahead.
+		// I will try to get the connection back at every update, but I don't want
+		// to permanently block my GUI if a connection cannot be established.
+		if err := g.worldProxy.Connect(); err != nil {
+			// Have some appropriate reaction to not being able to send our
+			// reaction to the current world state.
+			return // Nevermind, try again next frame.
+		}
+
+		if err := g.worldProxy.SendInput(&playerInput); err != nil {
+			// Have some appropriate reaction to not being able to send our
+			// reaction to the current world state.
+			return // Nevermind, try again next frame.
+		}
 	}
 }
 
 func (g *Gui) Update() error {
+	g.w = g.GetWorld()
+
+	var playerInput PlayerInput
 	if g.state == GameOngoing {
-		g.UpdateGameOngoing()
+		playerInput = g.UpdateGameOngoing(g.w)
 	} else if g.state == GamePaused {
-		g.UpdateGamePaused()
+		playerInput = g.UpdateGamePaused()
 	} else if g.state == GameWon {
-		g.UpdateGameWon()
+		playerInput = g.UpdateGameWon()
 	} else if g.state == GameLost {
-		g.UpdateGameLost()
+		playerInput = g.UpdateGameLost()
 	} else if g.state == Playback {
-		g.UpdatePlayback()
+		playerInput = g.UpdatePlayback(g.w)
 	}
+
+	g.SendInput(playerInput)
 	return nil
-}
-
-func (g *Gui) SyncWithWorld(input PlayerInput) bool {
-	// Here I want to block but only if there's a connection.
-	// If a connection cannot be established, or the send or get fails, or
-	// there is a timeout, I want to go ahead.
-	// I will try to get the connection back at every update, but I don't want
-	// to permanently block my GUI if a connection cannot be established.
-	if err := g.worldProxy.Connect(); err != nil {
-		return false // Nevermind, try again next frame.
-	}
-
-	var err error
-	if g.w, err = g.worldProxy.GetWorld(); err != nil {
-		return false // Nevermind, try again next frame.
-	}
-
-	if err = g.worldProxy.SendInput(&input); err != nil {
-		return false // Nevermind, try again next frame.
-	}
-
-	return true
 }
 
 //func DrawSprite(screen *ebiten.Image, img *ebiten.Image, pos Pt) {
@@ -550,6 +529,10 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 
 	// Background
 	screen.Fill(g.background.At(0, 0))
+
+	if g.w == nil {
+		return
+	}
 
 	// Obstacle grid
 	for y := I(0); y.Lt(g.w.Obstacles.NRows()); y.Inc() {
@@ -804,7 +787,8 @@ type Gui struct {
 	mousePosY             int
 	targetFrame           int
 	worldRunner           *WorldRunner
-	aiRunner              *AiRunner
+	player2Ai             *PlayerAI
+	fusedMode             bool
 }
 
 type GameState int64
@@ -927,10 +911,16 @@ func (g *Gui) AddPainter(endpoint string) {
 	go g.UpdateDebugInfo(i)
 }
 
-func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner, aiRunner *AiRunner, recordingFile string) {
+func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner, player2Ai *PlayerAI, recordingFile string) {
+	if worldProxy == nil {
+		g.fusedMode = true
+	} else {
+		g.fusedMode = false
+	}
+
 	g.worldProxy = worldProxy
 	g.worldRunner = worldRunner
-	g.aiRunner = aiRunner
+	g.player2Ai = player2Ai
 
 	g.frameIdx = 0
 	g.targetFrame = -1
@@ -966,45 +956,4 @@ func deserializeInputs(filename string) []PlayerInput {
 	inputs = make([]PlayerInput, lenInputs.ToInt64())
 	Deserialize(buf, inputs)
 	return inputs
-}
-
-func RunGui(worldProxy WorldProxy) {
-	var g Gui
-	g.Init(worldProxy, nil, nil, "")
-
-	// Start the game.
-	err := ebiten.RunGame(&g)
-	Check(err)
-}
-
-func RunGuiFusedPlay(recordingFile string) {
-	var worldAiProxy WorldPlayerProxy  // Connects the world and AI.
-	var worldGuiProxy WorldPlayerProxy // Connects the world and GUI.
-	var worldRunner WorldRunner
-	var aiRunner AiRunner
-	aiRunner.Initialize(&worldAiProxy)
-	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy, recordingFile)
-
-	var g Gui
-	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, "")
-
-	// Start the game.
-	err := ebiten.RunGame(&g)
-	Check(err)
-}
-
-func RunGuiFusedPlayback(recordingFile string) {
-	var worldAiProxy WorldPlayerProxy  // Connects the world and AI.
-	var worldGuiProxy WorldPlayerProxy // Connects the world and GUI.
-	var worldRunner WorldRunner
-	var aiRunner AiRunner
-	aiRunner.Initialize(&worldAiProxy)
-	worldRunner.Initialize(&worldGuiProxy, &worldAiProxy, "")
-
-	var g Gui
-	g.Init(&worldGuiProxy, &worldRunner, &aiRunner, recordingFile)
-
-	// Start the game.
-	err := ebiten.RunGame(&g)
-	Check(err)
 }

@@ -7,8 +7,10 @@ import (
 )
 
 type PlayerProxy interface {
-	GetInput() PlayerInput
-	SendWorld(w *World)
+	// Should block until both have happened for the same player:
+	// - the world has been sent successfully
+	// - the reaction has been received successfully
+	SendWorldGetInput(w *World) PlayerInput
 }
 
 // This is an object that represents a PlayerProxy.
@@ -24,8 +26,15 @@ type PlayerProxyTcpIp struct {
 	conn     net.Conn
 }
 
-func (p *PlayerProxyTcpIp) GetInput() PlayerInput {
-	// Keep trying to get an input from a peer.
+// We want to:
+// - connect to the player if we are not connected
+// - send the world to the player
+// - and get the reaction from the player
+// If the player disconnects, we must start the process over from the beginning.
+// We don't send the world to one connection and get the reaction from another
+// connection.
+func (p *PlayerProxyTcpIp) SendWorldGetInput(w *World) *PlayerInput {
+	// Keep trying to perform the transaction.
 	for {
 		// If we don't have a peer, wait until we get one.
 		if p.conn == nil {
@@ -38,6 +47,16 @@ func (p *PlayerProxyTcpIp) GetInput() PlayerInput {
 			Check(err)
 
 			listener.Close()
+		}
+
+		// Try sending the world to our peer.
+		data := w.Serialize()
+		if err := WriteData(p.conn, data); err != nil {
+			// There was an error. Nevermind, close the connection and wait
+			// for a new one.
+			p.conn.Close()
+			p.conn = nil
+			continue // Wait for a peer again.
 		}
 
 		// Try to get data from our peer.
@@ -53,27 +72,6 @@ func (p *PlayerProxyTcpIp) GetInput() PlayerInput {
 		// Finally, we can return the input.
 		var input PlayerInput
 		Deserialize(bytes.NewBuffer(data), &input)
-		return input
-	}
-}
-
-// Doesn't matter if this fails.
-func (p *PlayerProxyTcpIp) SendWorld(w *World) {
-	// Don't do anything if we don't have a peer.
-	// The communication between us and the peer is always that:
-	// - the peer connects
-	// - we get input from the peer
-	// - we send an ouput to the peer
-	// If the peer disconnects in middle of that, we start from the beginning,
-	// we don't accept a connection then continue with sending the output.
-	if p.conn == nil {
-		return
-	}
-
-	data := w.Serialize()
-
-	err := WriteData(p.conn, data)
-	if err != nil {
-		p.conn = nil
+		return &input
 	}
 }

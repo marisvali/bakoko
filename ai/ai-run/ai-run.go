@@ -8,17 +8,17 @@ import (
 )
 
 type AiRunner struct {
-	ai         PlayerAI
+	Ai         PlayerAI
 	worldProxy WorldProxy
 }
 
 func (ar *AiRunner) Initialize(worldProxy WorldProxy) {
 	ar.worldProxy = worldProxy
-	ar.ai.PauseBetweenShots = 1500 * time.Millisecond
-	ar.ai.LastShot = time.Now()
+	ar.Ai.PauseBetweenShots = 1500 * time.Millisecond
+	ar.Ai.LastShot = time.Now()
 }
 
-func (ar *AiRunner) GetWorld() *World {
+func (ar *AiRunner) getWorld() *World {
 	// This should block as the AI doesn't make sense if it doesn't
 	// synchronize with the simulation.
 	for {
@@ -34,7 +34,7 @@ func (ar *AiRunner) GetWorld() *World {
 	}
 }
 
-func (ar *AiRunner) SendInput(input *PlayerInput) {
+func (ar *AiRunner) sendInput(input *PlayerInput) {
 	// This should block as the AI doesn't make sense if it doesn't
 	// synchronize with the simulation.
 	for {
@@ -49,18 +49,10 @@ func (ar *AiRunner) SendInput(input *PlayerInput) {
 }
 
 func (ar *AiRunner) Step() {
-	w := ar.GetWorld()
-	input := ar.ai.Step(w)
-	ar.SendInput(&input)
+	w := ar.getWorld()
+	input := ar.Ai.Step(w)
+	ar.sendInput(&input)
 
 	// This may or may not block, who cares?
-	//guiProxy.SendPaintData(&ai.DebugInfo)
-}
-
-func RunAi(guiProxy GuiProxy, worldProxy WorldProxy) {
-	var aiRunner AiRunner
-	aiRunner.Initialize(worldProxy)
-	for {
-		aiRunner.Step()
-	}
+	//guiProxy.SendPaintData(&Ai.DebugInfo)
 }

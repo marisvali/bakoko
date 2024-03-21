@@ -19,6 +19,12 @@ func PlayerIsAt(p *Player, pt Pt) bool {
 	return p.Bounds.Center.SquaredDistTo(pt).Lt(U(5).Sqr())
 }
 
+func (mind *PlayerAI) Initialize() {
+	mind.PauseBetweenShots = 1500 * time.Millisecond
+	mind.LastShot = time.Now()
+	mind.HasTarget = false
+}
+
 func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 	// Check somehow if the world-main is initialized.
 	if w.Obstacles.NRows().Leq(ZERO) {
@@ -36,8 +42,9 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 	body := &w.Player2
 
 	if w.JustReloaded.Eq(ONE) {
-		// Reset target if the world just reloaded.
-		mind.HasTarget = false
+		// Re-initialize the mind to initial conditions if the world just
+		// reloaded. E.g. reset the target.
+		mind.Initialize()
 	}
 
 	if time.Now().Sub(mind.LastShot) > mind.PauseBetweenShots {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -37,6 +38,18 @@ func FileExists(name string) bool {
 		return true
 	}
 	return false
+}
+
+func GetNewRecordingFile() string {
+	date := time.Now()
+	for i := 0; i < 1000000; i++ {
+		filename := fmt.Sprintf("recordings/recorded-inputs-%04d-%02d-%02d-%06d",
+			date.Year(), date.Month(), date.Day(), i)
+		if !FileExists(filename) {
+			return filename
+		}
+	}
+	panic("Cannot record, no available filename found.")
 }
 
 //

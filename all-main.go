@@ -1,30 +1,45 @@
 package main
 
 import (
-	"fmt"
+	"github.com/hajimehoshi/ebiten/v2"
 	"os"
+	. "playful-patterns.com/bakoko/ai"
 	. "playful-patterns.com/bakoko/gui"
 	. "playful-patterns.com/bakoko/world"
-	"time"
+	. "playful-patterns.com/bakoko/world/world-run"
 )
 
 func main() {
 	if len(os.Args) == 1 {
-		RunGuiFusedPlay(getNewRecordingFile())
+		RunGuiFusedPlay(GetNewRecordingFile())
 	} else {
-		//RunGuiFusedPlayback(os.Args[1])
-		RunGuiFusedPlayback("d:/gms/bakoko/recordings/recorded-inputs-2024-03-20-000000")
+		RunGuiFusedPlayback(os.Args[1])
+		//RunGuiFusedPlayback("d:/gms/bakoko/recordings/recorded-inputs-2024-03-20-000000")
 	}
 }
 
-func getNewRecordingFile() string {
-	date := time.Now()
-	for i := 0; i < 1000000; i++ {
-		filename := fmt.Sprintf("recordings/recorded-inputs-%04d-%02d-%02d-%06d",
-			date.Year(), date.Month(), date.Day(), i)
-		if !FileExists(filename) {
-			return filename
-		}
-	}
-	panic("Cannot record, no available filename found.")
+func RunGuiFusedPlay(recordingFile string) {
+	var worldRunner WorldRunner
+	var player2Ai PlayerAI
+	worldRunner.Initialize(recordingFile)
+
+	var g Gui
+	g.Init(nil, &worldRunner, &player2Ai, "")
+
+	// Start the game.
+	err := ebiten.RunGame(&g)
+	Check(err)
+}
+
+func RunGuiFusedPlayback(recordingFile string) {
+	var worldRunner WorldRunner
+	var player2Ai PlayerAI
+	worldRunner.Initialize("")
+
+	var g Gui
+	g.Init(nil, &worldRunner, &player2Ai, recordingFile)
+
+	// Start the game.
+	err := ebiten.RunGame(&g)
+	Check(err)
 }

@@ -43,12 +43,9 @@ func (p *WorldPlayerProxy) GetWorld() (world *World, err error) {
 	return p.world, nil
 }
 
-func (p *WorldPlayerProxy) GetInput() PlayerInput {
-	return *p.input
-}
-
-func (p *WorldPlayerProxy) SendWorld(world *World) {
+func (p *WorldPlayerProxy) SendWorldGetInput(world *World) *PlayerInput {
 	p.world = world
+	return p.input
 }
 
 // TCP IP
