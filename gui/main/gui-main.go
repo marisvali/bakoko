@@ -14,7 +14,7 @@ import (
 func main() {
 	var worldProxyTcpIp WorldProxyTcpIp
 	worldProxyTcpIp.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
-	worldProxyTcpIp.Timeout = 50000 * time.Millisecond
+	worldProxyTcpIp.Timeout = 1000 * time.Millisecond
 
 	var g Gui
 	g.Init(&worldProxyTcpIp, nil, nil, "")
