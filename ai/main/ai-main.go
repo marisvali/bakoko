@@ -23,7 +23,11 @@ func main() {
 	for {
 		w := getWorld(&worldProxy)
 		input := ai.Step(w)
-		sendInput(&worldProxy, &input)
+
+		// This should not block. The only reason for SendInput to fail is because
+		// the connection failed somehow. In which case, we should revert to getting
+		// the world again and re-computing our reaction.
+		worldProxy.SendInput(&input)
 
 		// This may or may not block, who cares?
 		//guiProxy.SendPaintData(&Ai.DebugInfo)
@@ -43,19 +47,5 @@ func getWorld(worldProxy WorldProxy) *World {
 			continue // Retry from the beginning.
 		}
 		return w
-	}
-}
-
-func sendInput(worldProxy WorldProxy, input *PlayerInput) {
-	// This should block as the AI doesn't make sense if it doesn't
-	// synchronize with the simulation.
-	for {
-		if err := worldProxy.Connect(); err != nil {
-			continue // Retry from the beginning.
-		}
-		if err := worldProxy.SendInput(input); err != nil {
-			continue // Retry from the beginning.
-		}
-		break
 	}
 }
