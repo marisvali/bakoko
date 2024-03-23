@@ -23,31 +23,6 @@ type WorldProxy interface {
 	GetWorld() (w *World, err error)
 }
 
-// Direct proxy, just gets messages from world and sends them to the player
-// and vice-versa. Acts as both world proxy and player proxy.
-type WorldPlayerProxy struct {
-	input *PlayerInput
-	world *World
-}
-
-func (p *WorldPlayerProxy) Connect() error {
-	return nil
-}
-
-func (p *WorldPlayerProxy) SendInput(input *PlayerInput) error {
-	p.input = input
-	return nil
-}
-
-func (p *WorldPlayerProxy) GetWorld() (world *World, err error) {
-	return p.world, nil
-}
-
-func (p *WorldPlayerProxy) SendWorldGetInput(world *World) *PlayerInput {
-	p.world = world
-	return p.input
-}
-
 // TCP IP
 type WorldProxyTcpIp struct {
 	Endpoint string
