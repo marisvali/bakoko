@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	. "playful-patterns.com/bakoko/gui"
-	. "playful-patterns.com/bakoko/networking"
+	. "playful-patterns.com/bakoko/proxy"
 	. "playful-patterns.com/bakoko/world"
 	"time"
 )

@@ -16,7 +16,7 @@ import (
 	"os"
 	. "playful-patterns.com/bakoko/ai"
 	. "playful-patterns.com/bakoko/ints"
-	. "playful-patterns.com/bakoko/networking"
+	. "playful-patterns.com/bakoko/proxy"
 	. "playful-patterns.com/bakoko/world"
 	. "playful-patterns.com/bakoko/world/world-run"
 	"slices"

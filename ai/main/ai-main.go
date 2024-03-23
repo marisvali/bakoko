@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	. "playful-patterns.com/bakoko/ai"
-	. "playful-patterns.com/bakoko/networking"
+	. "playful-patterns.com/bakoko/proxy"
 	. "playful-patterns.com/bakoko/world"
 	"time"
 )

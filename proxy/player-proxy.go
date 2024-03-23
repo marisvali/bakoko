@@ -1,4 +1,4 @@
-package networking
+package proxy
 
 import (
 	"bytes"
@@ -13,14 +13,14 @@ type PlayerProxy interface {
 	SendWorldGetInput(w *World) *PlayerInput
 }
 
-// This is an object that represents a PlayerProxy.
-// If someone wants to talk to the PlayerProxy, they talk to this object
-// and this object passes on information to the PlayerProxy.
-// The communication with the PlayerProxy so far is this:
-// - give me an input
+// This is an object that represents a Player.
+// If someone wants to talk to the Player, they talk to this object
+// and this object passes on information to the Player.
+// The communication with the Player so far is this:
 // - here's the world
+// - give me an input
 // This is meant to be used by the world which talks to to players.
-// This is a server that waits for a PlayerProxy to connect to it.
+// This is a server that waits for a Player to connect to it.
 type PlayerProxyTcpIp struct {
 	Endpoint string
 	conn     net.Conn
