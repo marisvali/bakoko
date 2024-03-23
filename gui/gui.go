@@ -149,7 +149,7 @@ func (g *Gui) UpdateGamePaused() PlayerInput {
 	return playerInput
 }
 
-func (g *Gui) UpdateGameWon() PlayerInput {
+func (g *Gui) UpdateGameWon(world *World) PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -161,6 +161,11 @@ func (g *Gui) UpdateGameWon() PlayerInput {
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 	if slices.Contains(justPressedKeys, ebiten.KeyR) {
 		playerInput.Reload = true
+		g.state = GameOngoing
+	}
+
+	if world != nil && world.Player2.Health.Neq(ZERO) {
+		// This should normally happen only if the world is restarted/reloaded.
 		g.state = GameOngoing
 	}
 
@@ -248,7 +253,7 @@ func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 	return playerInput
 }
 
-func (g *Gui) UpdateGameLost() PlayerInput {
+func (g *Gui) UpdateGameLost(world *World) PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -260,6 +265,11 @@ func (g *Gui) UpdateGameLost() PlayerInput {
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 	if slices.Contains(justPressedKeys, ebiten.KeyR) {
 		playerInput.Reload = true
+		g.state = GameOngoing
+	}
+
+	if world != nil && world.Player1.Health.Neq(ZERO) {
+		// This should normally happen only if the world is restarted/reloaded.
 		g.state = GameOngoing
 	}
 
@@ -331,9 +341,9 @@ func (g *Gui) Update() error {
 	} else if g.state == GamePaused {
 		playerInput = g.UpdateGamePaused()
 	} else if g.state == GameWon {
-		playerInput = g.UpdateGameWon()
+		playerInput = g.UpdateGameWon(g.w)
 	} else if g.state == GameLost {
-		playerInput = g.UpdateGameLost()
+		playerInput = g.UpdateGameLost(g.w)
 	} else if g.state == Playback {
 		playerInput = g.UpdatePlayback(g.w)
 	}
