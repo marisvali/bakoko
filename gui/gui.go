@@ -191,21 +191,26 @@ func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 	}
 	g.mousePosX, g.mousePosY = ebiten.CursorPosition()
 
-	//if g.targetFrame >= 0 {
-	//	// Rewind.
-	//	var initialPlayerInput PlayerInput
-	//	initialPlayerInput.Reload = true
-	//	initialPlayerInput.Pause = true
-	//	g.SyncWithWorld(initialPlayerInput)
-	//	for i := 0; i < g.targetFrame; i++ {
-	//		g.SyncWithWorld(g.playerInputs[i])
-	//	}
-	//	g.frameIdx = g.targetFrame
-	//
-	//	g.player1PreviousHealth = g.w.Player1.Health
-	//	g.player2PreviousHealth = g.w.Player2.Health
-	//	g.targetFrame = -1
-	//}
+	if g.targetFrame >= 0 {
+		// Rewind.
+		// Reload world.
+		var initialPlayerInput PlayerInput
+		initialPlayerInput.Reload = true
+		initialPlayerInput.Pause = true
+		g.SendInput(initialPlayerInput)
+
+		// Replay the world.
+		for i := 0; i < g.targetFrame; i++ {
+			g.w = g.GetWorld()
+			g.SendInput(g.playerInputs[i])
+		}
+		g.w = g.GetWorld()
+		g.frameIdx = g.targetFrame
+
+		g.player1PreviousHealth = g.w.Player1.Health
+		g.player2PreviousHealth = g.w.Player2.Health
+		g.targetFrame = -1
+	}
 
 	var playerInput PlayerInput
 	if g.frameIdx < len(g.playerInputs) {
