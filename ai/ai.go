@@ -50,7 +50,7 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 	if time.Now().Sub(mind.LastShot) > mind.PauseBetweenShots {
 		ballStart := body.Bounds.Center
 		ballEnd := w.Player1.Bounds.Center
-		if pathIsClear(w.Obstacles, w.ObstacleSize, ballStart, ballEnd, U(50)) {
+		if pathIsClear(w, ballStart, ballEnd, U(50)) {
 			input.Shoot = true
 			input.ShootPt = ballEnd
 			mind.LastShot = time.Now()
@@ -142,28 +142,13 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 	return
 }
 
-func pathIsClear(obstacles Matrix, obstacleSize Int, start Pt, end Pt, ballSize Int) bool {
-	squares := obstaclesToSquares(obstacles, obstacleSize)
+func pathIsClear(w *World, start Pt, end Pt, ballSize Int) bool {
+	squares := w.GetRelevantSquares(ballSize, start, end)
 	// Check if we can travel to newPos without collision.
 	// CircleSquareCollision doesn't return oldPos as a collision point.
 	intersects, _, _ :=
 		CircleSquaresCollision(start, end, ballSize, squares)
 	return !intersects
-}
-
-func obstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
-	for row := I(0); row.Lt(obstacles.NRows()); row.Inc() {
-		for col := I(0); col.Lt(obstacles.NCols()); col.Inc() {
-			if obstacles.Get(row, col).Neq(I(0)) {
-				half := obstacleSize.DivBy(I(2))
-				squares = append(squares, Square{
-					Center: Pt{col.Times(obstacleSize).Plus(half), row.Times(obstacleSize).Plus(half)},
-					Size:   obstacleSize,
-				})
-			}
-		}
-	}
-	return
 }
 
 func GetMatrixPointClosestToWorld(m Matrix, size Int, offset Pt, pos Pt) Pt {

@@ -162,7 +162,7 @@ func (w *World) Deserialize(buf *bytes.Buffer) {
 	Deserialize(buf, &w.JustReloaded)
 }
 
-func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int, ballDiameter Int) {
+func (w *World) ShootBall(player *Player, pt Pt) {
 	if player.NBalls.Leq(I(0)) {
 		return
 	}
@@ -170,7 +170,7 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int, ballDiameter
 	moveDir := player.Bounds.Center.To(pt)
 	//moveDir.SetLen(MU(6000))
 	moveDir.SetLen(U(1))
-	speed := ballSpeed
+	speed := w.BallSpeed
 
 	// If the player moves right and shoots a ball to the right, the speed should compound.
 	// How do I make this true?
@@ -181,13 +181,13 @@ func ShootBall(player *Player, balls *[]Ball, pt Pt, ballSpeed Int, ballDiameter
 		//Pos:            Pt{player.Pos.X + (player.Diameter+30*Unit)/2 + 2*Unit, player.Pos.Y},
 		Bounds: Circle{
 			Center:   player.Bounds.Center,
-			Diameter: ballDiameter},
+			Diameter: w.BallDiameter},
 		MoveDir:        moveDir,
 		Speed:          speed,
 		CanBeCollected: false,
 		Type:           player.BallType,
 	}
-	*balls = append(*balls, ball)
+	w.Balls = append(w.Balls, ball)
 	// Infinite balls, for debugging purposes.
 	player.NBalls.Dec()
 }
@@ -214,7 +214,7 @@ func ShootBallDebug(balls *[]Ball, orig, dest Pt, speed Int, ballDiameter Int) {
 // The logic of this function is that the circle travels for a length of
 // travelLen in total and has no concept of time. So you can say it treats
 // the movement as uniform, as if moving with the same speed the whole time.
-func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos Pt, newTravelVec Pt, stop bool) {
+func (w *World) Travel(c Circle, travelVec Pt, travelLen Int) (newPos Pt, newTravelVec Pt, stop bool) {
 	oldPos := c.Center
 
 	bounces := 0
@@ -222,6 +222,7 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos P
 		// Given an original position and a travel vector, compute the new
 		// position.
 		newPos = oldPos.Plus(travelVec.Times(travelLen).DivBy(travelVec.Len()))
+		obstacles := w.GetRelevantSquares(c.Diameter, oldPos, newPos)
 
 		// Check if we can travel to newPos without collision.
 		// CircleSquareCollision doesn't return oldPos as a collision point.
@@ -259,14 +260,14 @@ func Travel(c Circle, travelVec Pt, travelLen Int, obstacles []Square) (newPos P
 	}
 }
 
-func UpdateBallPositions(balls []Ball, s []Square, dec Int) {
+func (w *World) UpdateBallPositions(balls []Ball, dec Int) {
 	// update the state of each ball (move it, make it collectible)
 	for idx := range balls {
 		ball := &balls[idx]
 		if ball.Speed.Gt(I(0)) {
 			// move the ball
 			var stop bool
-			ball.Bounds.Center, ball.MoveDir, stop = Travel(ball.Bounds, ball.MoveDir, ball.Speed, s)
+			ball.Bounds.Center, ball.MoveDir, stop = w.Travel(ball.Bounds, ball.MoveDir, ball.Speed)
 
 			if stop {
 				ball.Speed = I(0)
@@ -285,8 +286,10 @@ func UpdateBallPositions(balls []Ball, s []Square, dec Int) {
 	}
 }
 
-func MovePlayer(player *Player, newPos Pt, squares []Square) {
+func (w *World) MovePlayer(player *Player, newPos Pt) {
 	oldPos := player.Bounds.Center
+
+	squares := w.GetRelevantSquares(player.Bounds.Diameter, oldPos, newPos)
 
 	intersects, circlePositionAtCollision, collisionNormal :=
 		CircleSquaresCollision(oldPos, newPos, player.Bounds.Diameter, squares)
@@ -331,8 +334,7 @@ func MoveStraightLine(start, end Pt) (input PlayerInput) {
 	return
 }
 
-func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
-	ballSpeed Int, ballDiameter Int, squares []Square) {
+func (w *World) HandlePlayerInput(player *Player, input PlayerInput) {
 
 	if player.State.Eq(PlayerStunned) && player.StunnedImobilizes {
 		return // Can't move or shoot while stunned.
@@ -346,7 +348,7 @@ func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	if input.MoveLeft {
 		newPosX.X.Subtract(player.Speed)
 	}
-	MovePlayer(player, newPosX, squares)
+	w.MovePlayer(player, newPosX)
 
 	// Now try vertical movement.
 	newPosY := player.Bounds.Center
@@ -356,10 +358,10 @@ func HandlePlayerInput(player *Player, balls *[]Ball, input PlayerInput,
 	if input.MoveDown {
 		newPosY.Y.Add(player.Speed)
 	}
-	MovePlayer(player, newPosY, squares)
+	w.MovePlayer(player, newPosY)
 
 	if input.Shoot {
-		ShootBall(player, balls, input.ShootPt, ballSpeed, ballDiameter)
+		w.ShootBall(player, input.ShootPt)
 	}
 }
 
@@ -371,7 +373,7 @@ func FriendlyBall(player Player, ball Ball) bool {
 	return player.BallType.Eq(ball.Type)
 }
 
-func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
+func (w *World) HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 	toBeDeleted := make([]bool, len(*balls))
 	for idx, ball := range *balls {
 		if !PlayerAndBallAreTouching(*player, ball) {
@@ -413,33 +415,18 @@ func HandlePlayerBallInteraction(player *Player, balls *[]Ball) {
 	return
 }
 
-func ObstaclesToSquares(obstacles Matrix, obstacleSize Int) (squares []Square) {
-	for row := I(0); row.Lt(obstacles.NRows()); row.Inc() {
-		for col := I(0); col.Lt(obstacles.NCols()); col.Inc() {
-			if obstacles.Get(row, col).Neq(I(0)) {
-				half := obstacleSize.DivBy(I(2))
-				squares = append(squares, Square{
-					Center: Pt{col.Times(obstacleSize).Plus(half), row.Times(obstacleSize).Plus(half)},
-					Size:   obstacleSize,
-				})
-			}
-		}
-	}
-	return
-}
-
 func (w *World) Step(input *Input, frameIdx int) {
-	squares := ObstaclesToSquares(w.Obstacles, w.ObstacleSize)
+	w.DebugInfo = DebugInfo{} // reset
 
-	HandlePlayerInput(&w.Player1, &w.Balls, input.Player1Input, w.BallSpeed, w.BallDiameter, squares)
+	w.HandlePlayerInput(&w.Player1, input.Player1Input)
 	if frameIdx == 10 {
 		//ShootBallDebug(&w.Balls, UPt(200, 250), UPt(1000, 2000), MU(200000))
 	}
-	HandlePlayerInput(&w.Player2, &w.Balls, input.Player2Input, w.BallSpeed, w.BallDiameter, squares)
+	w.HandlePlayerInput(&w.Player2, input.Player2Input)
 
-	UpdateBallPositions(w.Balls, squares, w.BallDec)
-	HandlePlayerBallInteraction(&w.Player1, &w.Balls)
-	HandlePlayerBallInteraction(&w.Player2, &w.Balls)
+	w.UpdateBallPositions(w.Balls, w.BallDec)
+	w.HandlePlayerBallInteraction(&w.Player1, &w.Balls)
+	w.HandlePlayerBallInteraction(&w.Player2, &w.Balls)
 }
 
 func LoadWorld(w *World) {
@@ -527,5 +514,136 @@ func loadWorldData(folder string) (data worldData) {
 		}
 	}
 	CheckCrashes = true
+	return
+}
+
+func (w *World) GetRelevantSquares(diameter Int, oldPos Pt, newPos Pt) (squares []Square) {
+	// Compute the rectangle in which the travel will take place.
+	x1, x2 := MinMax(oldPos.X, newPos.X)
+	y1, y2 := MinMax(oldPos.Y, newPos.Y)
+
+	// Expand the rectangle by half the diameter to make sure we get everything that is touched.
+	radius := diameter.DivBy(TWO)
+	// Expand the radius by (10% + 10) just to be sure we don't screw up because
+	// of any tolerances. This function is used to get squares that MIGHT be
+	// relevant. It's ok to get too many squares. It's not at all ok to get too
+	// few.
+	radius = radius.Plus(radius.DivBy(I(10))).Plus(I(10))
+	x1.Subtract(radius)
+	x2.Add(radius)
+	y1.Subtract(radius)
+	y2.Add(radius)
+
+	// Convert the points to obstacle indexes.
+	x1 = x1.DivBy(w.ObstacleSize)
+	x2 = x2.DivBy(w.ObstacleSize)
+	y1 = y1.DivBy(w.ObstacleSize)
+	y2 = y2.DivBy(w.ObstacleSize)
+
+	// Convert obstacles to squares.
+	for row := y1; row.Leq(y2); row.Inc() {
+		for col := x1; col.Leq(x2); col.Inc() {
+			if w.Obstacles.Get(row, col).Neq(I(0)) {
+				half := w.ObstacleSize.DivBy(I(2))
+				square := Square{
+					Center: Pt{
+						col.Times(w.ObstacleSize).Plus(half),
+						row.Times(w.ObstacleSize).Plus(half)},
+					Size: w.ObstacleSize,
+				}
+				squares = append(squares, square)
+
+				//var ds DebugSquare
+				//ds.Square = square
+				//ds.Col = color.RGBA{255, 0, 0, 255}
+				//w.DebugInfo.Squares = append(w.DebugInfo.Squares, ds)
+			}
+		}
+	}
+
+	return
+
+	//for y := I(0); y.Lt(w.Obstacles.NRows()); y.Inc() {
+	//	for x := I(0); x.Lt(w.Obstacles.NCols()); x.Inc() {
+	//		var pt DebugPoint
+	//		pt.Pos = Pt{x.Times(w.ObstacleSize), y.Times(w.ObstacleSize)}
+	//		offset := Pt{w.ObstacleSize.DivBy(TWO), w.ObstacleSize.DivBy(TWO)}
+	//		pt.Pos.Add(offset)
+	//		pt.Size = U(5)
+	//		pt.Col = color.RGBA{0, 0, 255, 255}
+	//		w.DebugInfo.Points = append(w.DebugInfo.Points, pt)
+	//	}
+	//}
+	//
+	//for y := y1; y.Leq(y2); y.Inc() {
+	//	for x := x1; x.Leq(x2); x.Inc() {
+	//		var pt DebugPoint
+	//		pt.Pos = Pt{x.Times(w.ObstacleSize), y.Times(w.ObstacleSize)}
+	//		offset := Pt{w.ObstacleSize.DivBy(TWO), w.ObstacleSize.DivBy(TWO)}
+	//		pt.Pos.Add(offset)
+	//		pt.Size = U(5)
+	//		pt.Col = color.RGBA{255, 0, 255, 255}
+	//		w.DebugInfo.Points = append(w.DebugInfo.Points, pt)
+	//	}
+	//}
+
+	//w.DebugInfo.Points = append(w.DebugInfo.Points, DebugPoint{
+	//	Pos:  Pt{x1, y1},
+	//	Size: U(10),
+	//	Col:  color.RGBA{255, 0, 0, 255},
+	//})
+	//w.DebugInfo.Points = append(w.DebugInfo.Points, DebugPoint{
+	//	Pos:  Pt{x2, y2},
+	//	Size: U(10),
+	//	Col:  color.RGBA{255, 0, 0, 255},
+	//})
+
+	//x1 := oldPos.X.DivBy(obstacleSize)
+	//y1 := oldPos.Y.DivBy(obstacleSize)
+	//x2 := newPos.X.DivBy(obstacleSize)
+	//y2 := newPos.Y.DivBy(obstacleSize)
+	//
+	//minX, maxX := MinMax(x1, x2)
+	//minY, maxY := MinMax(y1, y2)
+	//minX.Dec()
+	//maxX.Add(TWO)
+	//minY.Dec()
+	//maxY.Add(TWO)
+	//if minX.Lt(ZERO) {
+	//	minX = ZERO
+	//}
+	//if minY.Lt(ZERO) {
+	//	minY = ZERO
+	//}
+	//if maxX.Geq(obstacles.NCols()) {
+	//	maxX = obstacles.NCols().Minus(ONE)
+	//}
+	//if maxY.Geq(obstacles.NRows()) {
+	//	maxY = obstacles.NRows().Minus(ONE)
+	//}
+	//
+	//half := obstacleSize.DivBy(I(2))
+	//for row := minY; row.Leq(maxY); row.Inc() {
+	//	for col := minX; col.Leq(maxX); col.Inc() {
+	//		if obstacles.Get(row, col).Neq(ZERO) {
+	//			squares = append(squares, Square{
+	//				Center: Pt{col.Times(obstacleSize).Plus(half), row.Times(obstacleSize).Plus(half)},
+	//				Size:   obstacleSize,
+	//			})
+	//		}
+	//	}
+	//}
+
+	//half := obstacleSize.DivBy(I(2))
+	//for row := ZERO; row.Lt(obstacles.NRows()); row.Inc() {
+	//	for col := ZERO; col.Lt(obstacles.NCols()); col.Inc() {
+	//		if obstacles.Get(row, col).Neq(ZERO) {
+	//			squares = append(squares, Square{
+	//				Center: Pt{col.Times(obstacleSize).Plus(half), row.Times(obstacleSize).Plus(half)},
+	//				Size:   obstacleSize,
+	//			})
+	//		}
+	//	}
+	//}
 	return
 }
