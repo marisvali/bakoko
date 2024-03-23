@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	. "playful-patterns.com/bakoko/networking"
 	. "playful-patterns.com/bakoko/world"
 	. "playful-patterns.com/bakoko/world/world-run"
@@ -9,6 +10,8 @@ import (
 // 3 possible run modes: FusedRecording, FusedPlayback, SplitRecording
 // Run the world in SplitRecording mode.
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
 	player1 := PlayerProxyTcpIp{}
 	player1.Endpoint = "localhost:56901"
 	player2 := PlayerProxyTcpIp{}

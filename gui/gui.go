@@ -311,17 +311,9 @@ func (g *Gui) SendInput(playerInput PlayerInput) {
 		// Now, step the world.
 		g.worldRunner.Step(input)
 	} else {
-		// Here I want to block but only if there's a connection.
-		// If a connection cannot be established, or the send or get fails, or
-		// there is a timeout, I want to go ahead.
-		// I will try to get the connection back at every update, but I don't want
-		// to permanently block my GUI if a connection cannot be established.
-		if err := g.worldProxy.Connect(); err != nil {
-			// Have some appropriate reaction to not being able to send our
-			// reaction to the current world state.
-			return // Nevermind, try again next frame.
-		}
-
+		// Here I want to attempt to send only if there is a connection.
+		// If there isn't, a new connection should not be attempted. That
+		// should happen before GetWorld.
 		if err := g.worldProxy.SendInput(&playerInput); err != nil {
 			// Have some appropriate reaction to not being able to send our
 			// reaction to the current world state.

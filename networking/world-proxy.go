@@ -93,6 +93,7 @@ func (p *WorldProxyTcpIp) SendInput(input *PlayerInput) error {
 	// Invalidate the connection and move on.
 	if err != nil {
 		log.Println(err)
+		p.conn.Close()
 		p.conn = nil
 		log.Println("lost connection (1)")
 		return err
@@ -110,6 +111,7 @@ func (p *WorldProxyTcpIp) GetWorld() (w *World, err error) {
 	// If there was an error, assume the peer is no longer available.
 	// Invalidate the connection and try again later.
 	if err != nil {
+		p.conn.Close()
 		p.conn = nil
 		log.Println("lost connection (3)")
 		return nil, err

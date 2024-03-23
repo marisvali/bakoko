@@ -54,6 +54,7 @@ func (p *GuiProxyTcpIp) SendPaintData(debugInfo *DebugInfo) {
 	// If there was an error, assume the peer is no longer available.
 	// Invalidate the connection and try again later.
 	if err != nil {
+		p.conn.Close()
 		p.conn = nil
 		log.Println("lost connection (2)")
 	}
