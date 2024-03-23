@@ -45,3 +45,7 @@ func (wr *WorldRunner) Step(input Input) {
 func (wr *WorldRunner) GetWorld() *World {
 	return &wr.w
 }
+
+func (wr *WorldRunner) GetDebugInfo() *DebugInfo {
+	return &wr.w.DebugInfo
+}

@@ -24,7 +24,7 @@ func RunGuiFusedPlay(recordingFile string) {
 	worldRunner.Initialize(recordingFile)
 
 	var g Gui
-	g.Init(nil, &worldRunner, &player2Ai, "")
+	g.Init(nil, &worldRunner, &player2Ai, "", []string{})
 
 	// Start the game.
 	err := ebiten.RunGame(&g)
@@ -37,7 +37,7 @@ func RunGuiFusedPlayback(recordingFile string) {
 	worldRunner.Initialize("")
 
 	var g Gui
-	g.Init(nil, &worldRunner, &player2Ai, recordingFile)
+	g.Init(nil, &worldRunner, &player2Ai, recordingFile, []string{})
 
 	// Start the game.
 	err := ebiten.RunGame(&g)

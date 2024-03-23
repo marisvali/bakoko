@@ -20,8 +20,10 @@ func main() {
 	worldProxyTcpIp.Endpoint = os.Args[1] // localhost:56901 or localhost:56902
 	worldProxyTcpIp.Timeout = 1000 * time.Millisecond
 
+	painters := []string{os.Args[2], os.Args[3]}
+
 	var g Gui
-	g.Init(&worldProxyTcpIp, nil, nil, "")
+	g.Init(&worldProxyTcpIp, nil, nil, "", painters)
 
 	// Start the game.
 	err := ebiten.RunGame(&g)

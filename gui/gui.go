@@ -693,10 +693,12 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 	}
 
 	// Debug geometry.
-	for i := range g.debugInfo {
-		info := g.GetDebugInfo(i)
-		for _, p := range info.Points {
-			g.DrawFilledSquare(screen, Square{p.Pos, p.Size}, p.Col)
+	if g.data.DrawDebugGraphics {
+		for i := range g.debugInfo {
+			info := g.GetDebugInfo(i)
+			for _, p := range info.Points {
+				g.DrawFilledSquare(screen, Square{p.Pos, p.Size}, p.Col)
+			}
 		}
 	}
 
@@ -929,11 +931,17 @@ func (g *Gui) AddPainter(endpoint string) {
 	go g.UpdateDebugInfo(i)
 }
 
-func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner, player2Ai *PlayerAI, recordingFile string) {
+func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner,
+	player2Ai *PlayerAI, recordingFile string, painters []string) {
 	if worldProxy == nil {
 		g.fusedMode = true
 	} else {
 		g.fusedMode = false
+		// We only have painters in SplitRecording mode because the communication
+		// of debug info has only been thought of and setup for this mode so far.
+		for i := range painters {
+			g.AddPainter(painters[i])
+		}
 	}
 
 	g.worldProxy = worldProxy
@@ -950,8 +958,6 @@ func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner, player2Ai *P
 	}
 
 	g.folderWatcher.Folder = "gui-data"
-	//g.AddPainter(os.Args[2])
-	//g.AddPainter(os.Args[3])
 	g.loadGuiData()
 
 	// Load the Arial font

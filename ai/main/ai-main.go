@@ -30,7 +30,7 @@ func main() {
 		worldProxy.SendInput(&input)
 
 		// This may or may not block, who cares?
-		//guiProxy.SendPaintData(&Ai.DebugInfo)
+		guiProxy.SendPaintData(&ai.DebugInfo)
 	}
 }
 
