@@ -23,6 +23,68 @@ import (
 	"time"
 )
 
+type GuiData struct {
+	ScaleFactor       float64
+	WindowWidth       int
+	WindowHeight      int
+	PlayerOffsetX     float64
+	PlayerOffsetY     float64
+	PlayerOffsetSize  float64
+	DrawDebugGraphics bool
+	PlaybackBarHeight int
+}
+
+type Gui struct {
+	w              *World
+	worldProxy     WorldProxy
+	painters       []PainterProxy
+	player1        *ebiten.Image
+	player1Hit     *ebiten.Image
+	player2        *ebiten.Image
+	player2Hit     *ebiten.Image
+	ball1          *ebiten.Image
+	ball2          *ebiten.Image
+	health         *ebiten.Image
+	obstacle       *ebiten.Image
+	background     *ebiten.Image
+	screen         *ebiten.Image
+	hit            *ebiten.Image
+	hitGood        *ebiten.Image
+	textBackground *ebiten.Image
+	won            *ebiten.Image
+	lost           *ebiten.Image
+	play           *ebiten.Image
+	pause          *ebiten.Image
+	playBar        *ebiten.Image
+	cursor         *ebiten.Image
+	data           GuiData
+	times          []time.Time
+	filledSquare   *ebiten.Image
+	debugInfo      []DebugInfo
+	debugInfoMutex []sync.Mutex
+	folderWatcher  FolderWatcher
+	hitAnimation1  int
+	hitAnimation2  int
+	// The UI is responsible for keeping track of state changes that are
+	// relevant for it.
+	player1PreviousHealth Int
+	player2PreviousHealth Int
+	state                 GameState
+	defaultFont           font.Face
+	gameOverAnimation     int
+	playerInputs          []PlayerInput
+	frameIdx              int
+	leftButtonClicked     bool
+	leftButtonPressed     bool
+	mousePosX             int
+	mousePosY             int
+	targetFrame           int
+	worldRunner           *WorldRunner
+	player2Ai             *PlayerAI
+	fusedMode             bool
+	playbackPaused        bool
+}
+
 func colorHex(hexVal int) color.Color {
 	if hexVal < 0x000000 || hexVal > 0xFFFFFF {
 		panic(fmt.Sprintf("Invalid HEX value for color: %d", hexVal))
@@ -173,12 +235,44 @@ func (g *Gui) UpdateGameWon(world *World) PlayerInput {
 
 func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 	// Get keyboard input.
+	var pressedKeys []ebiten.Key
+	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
+	if slices.Contains(pressedKeys, ebiten.KeyLeft) && slices.Contains(pressedKeys, ebiten.KeyShift) {
+		g.targetFrame = g.frameIdx - 1
+		if g.targetFrame < 0 {
+			g.targetFrame = 0
+		}
+	}
+
+	if slices.Contains(pressedKeys, ebiten.KeyRight) && slices.Contains(pressedKeys, ebiten.KeyShift) {
+		g.targetFrame = g.frameIdx + 1
+		if g.targetFrame >= len(g.playerInputs) {
+			g.targetFrame = len(g.playerInputs) - 1
+		}
+	}
+
 	var justPressedKeys []ebiten.Key
 	justPressedKeys = inpututil.AppendJustPressedKeys(justPressedKeys)
 
-	//if slices.Contains(justPressedKeys, ebiten.KeyEscape) {
-	//	g.state = GamePaused
-	//}
+	//if slices.Contains(justPressedKeys, ebiten.KeyLeft) && !slices.Contains(pressedKeys, ebiten.KeyShift) {
+	if slices.Contains(pressedKeys, ebiten.KeyLeft) && !slices.Contains(pressedKeys, ebiten.KeyShift) {
+		g.targetFrame = g.frameIdx - 10
+		if g.targetFrame < 0 {
+			g.targetFrame = 0
+		}
+	}
+
+	//if slices.Contains(justPressedKeys, ebiten.KeyRight) && !slices.Contains(pressedKeys, ebiten.KeyShift) {
+	if slices.Contains(pressedKeys, ebiten.KeyRight) && !slices.Contains(pressedKeys, ebiten.KeyShift) {
+		g.targetFrame = g.frameIdx + 10
+		if g.targetFrame >= len(g.playerInputs) {
+			g.targetFrame = len(g.playerInputs) - 1
+		}
+	}
+
+	if slices.Contains(justPressedKeys, ebiten.KeySpace) {
+		g.playbackPaused = !g.playbackPaused
+	}
 
 	// Get mouse input.
 	g.leftButtonClicked = inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0)
@@ -215,7 +309,9 @@ func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 	if g.frameIdx < len(g.playerInputs) {
 		playerInput = g.playerInputs[g.frameIdx]
 	}
-	g.frameIdx++
+	if !g.playbackPaused {
+		g.frameIdx++
+	}
 
 	if world != nil {
 		// React to updates.
@@ -319,7 +415,9 @@ func (g *Gui) Update() error {
 		playerInput = g.UpdatePlayback(g.w)
 	}
 
-	g.SendInput(playerInput)
+	if !g.playbackPaused {
+		g.SendInput(playerInput)
+	}
 
 	// Updates common to all states.
 	if g.folderWatcher.FolderContentsChanged() {
@@ -680,12 +778,16 @@ func (g *Gui) Draw(screen *ebiten.Image) {
 }
 
 func (g *Gui) DrawPlaybackBar(screen *ebiten.Image) {
+	mx, my := float64(g.mousePosX), float64(g.mousePosY)
+
+	// background of playback bar
 	g.DrawSprite2(
 		g.textBackground, 0,
 		float64(screen.Bounds().Dy()-g.data.PlaybackBarHeight),
 		float64(screen.Bounds().Dx()),
 		float64(g.data.PlaybackBarHeight))
 
+	// Show where the mouse button was pressed.
 	if g.leftButtonPressed {
 		g.DrawSprite(
 			g.ball1,
@@ -694,14 +796,29 @@ func (g *Gui) DrawPlaybackBar(screen *ebiten.Image) {
 			30)
 	}
 
-	var x, y, width, height float64
-	x = 10
-	y = float64(screen.Bounds().Dy()-g.data.PlaybackBarHeight) + 10
-	width = float64(screen.Bounds().Dx()) - 300
-	height = float64(g.data.PlaybackBarHeight) - 20
-	mx, my := float64(g.mousePosX), float64(g.mousePosY)
+	// y of all controls
+	y := float64(screen.Bounds().Dy()-g.data.PlaybackBarHeight) + 5
 
-	g.DrawSprite2(g.health, x, y, width, height)
+	// play/pause button
+	if g.playbackPaused {
+		g.DrawSprite2(g.play, 0, y, 45, 45)
+	} else {
+		g.DrawSprite2(g.pause, 0, y, 45, 45)
+	}
+
+	if g.leftButtonClicked &&
+		mx >= 0 && mx <= 45 &&
+		my >= y && my <= y+45 {
+		g.playbackPaused = !g.playbackPaused
+	}
+
+	// play bar.
+	var x, width, height float64
+	x = 50
+	width = float64(screen.Bounds().Dx()) - 60
+	height = float64(g.data.PlaybackBarHeight) - 5
+
+	g.DrawSprite2(g.playBar, x, y, width, height)
 	if g.leftButtonClicked &&
 		mx >= x && mx <= (x+width) &&
 		my >= y && my <= (y+height) {
@@ -714,67 +831,15 @@ func (g *Gui) DrawPlaybackBar(screen *ebiten.Image) {
 		factor := (mx - x) / width
 		g.targetFrame = int(factor * float64(len(g.playerInputs)))
 	}
+
+	// cursor
+	factor := float64(g.frameIdx) / float64(len(g.playerInputs))
+	cursorX := x + factor*width
+	g.DrawSprite(g.cursor, cursorX, y+45/2, 45)
 }
 
 func (g *Gui) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return outsideWidth, outsideHeight
-}
-
-type GuiData struct {
-	ScaleFactor       float64
-	WindowWidth       int
-	WindowHeight      int
-	PlayerOffsetX     float64
-	PlayerOffsetY     float64
-	PlayerOffsetSize  float64
-	DrawDebugGraphics bool
-	PlaybackBarHeight int
-}
-
-type Gui struct {
-	w              *World
-	worldProxy     WorldProxy
-	painters       []PainterProxy
-	player1        *ebiten.Image
-	player1Hit     *ebiten.Image
-	player2        *ebiten.Image
-	player2Hit     *ebiten.Image
-	ball1          *ebiten.Image
-	ball2          *ebiten.Image
-	health         *ebiten.Image
-	obstacle       *ebiten.Image
-	background     *ebiten.Image
-	screen         *ebiten.Image
-	hit            *ebiten.Image
-	hitGood        *ebiten.Image
-	textBackground *ebiten.Image
-	won            *ebiten.Image
-	lost           *ebiten.Image
-	data           GuiData
-	times          []time.Time
-	filledSquare   *ebiten.Image
-	debugInfo      []DebugInfo
-	debugInfoMutex []sync.Mutex
-	folderWatcher  FolderWatcher
-	hitAnimation1  int
-	hitAnimation2  int
-	// The UI is responsible for keeping track of state changes that are
-	// relevant for it.
-	player1PreviousHealth Int
-	player2PreviousHealth Int
-	state                 GameState
-	defaultFont           font.Face
-	gameOverAnimation     int
-	playerInputs          []PlayerInput
-	frameIdx              int
-	leftButtonClicked     bool
-	leftButtonPressed     bool
-	mousePosX             int
-	mousePosY             int
-	targetFrame           int
-	worldRunner           *WorldRunner
-	player2Ai             *PlayerAI
-	fusedMode             bool
 }
 
 type GameState int64
@@ -850,6 +915,10 @@ func (g *Gui) loadGuiData() {
 		g.textBackground = loadImage("gui-data/text-background.png")
 		g.won = loadImage("gui-data/won.png")
 		g.lost = loadImage("gui-data/lost.png")
+		g.play = loadImage("gui-data/play.png")
+		g.pause = loadImage("gui-data/pause.png")
+		g.playBar = loadImage("gui-data/play-bar.png")
+		g.cursor = loadImage("gui-data/cursor.png")
 		if g.state == Playback {
 			LoadJSON("gui-data/gui-playback.json", &g.data)
 		} else {
