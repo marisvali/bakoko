@@ -113,7 +113,7 @@ func (g *Gui) UpdateGameOngoing(world *World) PlayerInput {
 	return playerInput
 }
 
-func (g *Gui) UpdateGamePaused() PlayerInput {
+func (g *Gui) UpdateGamePaused(world *World) PlayerInput {
 	// Get keyboard input.
 	var pressedKeys []ebiten.Key
 	pressedKeys = inpututil.AppendPressedKeys(pressedKeys)
@@ -126,6 +126,22 @@ func (g *Gui) UpdateGamePaused() PlayerInput {
 	if slices.Contains(justPressedKeys, ebiten.KeyR) {
 		playerInput.Reload = true
 		g.state = GameOngoing
+	}
+
+	if world != nil {
+		if world.Player1.Health.Eq(ZERO) {
+			// This can only happen if the GUI was restarted and it started in
+			// paused mode, but the world was already in lost mode.
+			g.state = GameLost
+			g.gameOverAnimation = -500
+		}
+
+		if world.Player2.Health.Eq(ZERO) {
+			// This can only happen if the GUI was restarted and it started in
+			// paused mode, but the world was already in won mode.
+			g.state = GameWon
+			g.gameOverAnimation = -500
+		}
 	}
 
 	unpause := inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0)
@@ -339,7 +355,7 @@ func (g *Gui) Update() error {
 	if g.state == GameOngoing {
 		playerInput = g.UpdateGameOngoing(g.w)
 	} else if g.state == GamePaused {
-		playerInput = g.UpdateGamePaused()
+		playerInput = g.UpdateGamePaused(g.w)
 	} else if g.state == GameWon {
 		playerInput = g.UpdateGameWon(g.w)
 	} else if g.state == GameLost {
