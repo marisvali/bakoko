@@ -1,7 +1,6 @@
 package gui
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -921,7 +920,7 @@ func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner,
 		g.state = GamePaused
 	} else {
 		g.state = Playback
-		g.playerInputs = deserializeInputs(recordingFile)
+		g.playerInputs = DeserializeInputs(recordingFile)
 	}
 
 	g.folderWatcher.Folder = "gui-data"
@@ -937,14 +936,4 @@ func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner,
 		Hinting: font.HintingVertical,
 	})
 	Check(err)
-}
-
-func deserializeInputs(filename string) []PlayerInput {
-	var inputs []PlayerInput
-	buf := bytes.NewBuffer(ReadFile(filename))
-	var lenInputs Int
-	Deserialize(buf, &lenInputs)
-	inputs = make([]PlayerInput, lenInputs.ToInt64())
-	Deserialize(buf, inputs)
-	return inputs
 }

@@ -149,6 +149,10 @@ type FolderWatcher struct {
 }
 
 func (f *FolderWatcher) FolderContentsChanged() bool {
+	if f.Folder == "" {
+		return false
+	}
+
 	files, err := os.ReadDir(f.Folder)
 	Check(err)
 	if len(files) != len(f.times) {

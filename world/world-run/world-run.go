@@ -13,9 +13,11 @@ type WorldRunner struct {
 	currentInputs []PlayerInput
 }
 
-func (wr *WorldRunner) Initialize(recordingFile string) {
+func (wr *WorldRunner) Initialize(recordingFile string, folderWatchingEnabled bool) {
 	wr.frameIdx = 0
-	wr.watcher.Folder = "world-data"
+	if folderWatchingEnabled {
+		wr.watcher.Folder = "world-data"
+	}
 	wr.recordingFile = recordingFile
 	LoadWorld(&wr.w)
 }

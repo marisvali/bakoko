@@ -21,7 +21,7 @@ func main() {
 func RunGuiFusedPlay(recordingFile string) {
 	var worldRunner WorldRunner
 	var player2Ai PlayerAI
-	worldRunner.Initialize(recordingFile)
+	worldRunner.Initialize(recordingFile, true)
 
 	var g Gui
 	g.Init(nil, &worldRunner, &player2Ai, "", []string{})
@@ -34,7 +34,7 @@ func RunGuiFusedPlay(recordingFile string) {
 func RunGuiFusedPlayback(recordingFile string) {
 	var worldRunner WorldRunner
 	var player2Ai PlayerAI
-	worldRunner.Initialize("")
+	worldRunner.Initialize("", false)
 
 	var g Gui
 	g.Init(nil, &worldRunner, &player2Ai, recordingFile, []string{})

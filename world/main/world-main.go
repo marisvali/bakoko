@@ -20,7 +20,7 @@ func main() {
 	guiProxy.Endpoint = "localhost:56903"
 
 	var worldRunner WorldRunner
-	worldRunner.Initialize(GetNewRecordingFile())
+	worldRunner.Initialize(GetNewRecordingFile(), false)
 	for {
 		// First, send the current world to players and get their reactions.
 		var input Input
