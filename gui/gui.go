@@ -64,10 +64,6 @@ func (g *Gui) UpdateGameOngoing(world *World) PlayerInput {
 		g.state = GamePaused
 	}
 
-	if g.folderWatcher.FolderContentsChanged() {
-		g.loadGuiData()
-	}
-
 	// Get mouse input.
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		playerInput.Shoot = true
@@ -100,14 +96,6 @@ func (g *Gui) UpdateGameOngoing(world *World) PlayerInput {
 			g.state = GameWon
 			g.gameOverAnimation = -500
 		}
-	}
-
-	if g.hitAnimation1 > 0 {
-		g.hitAnimation1 -= 10
-	}
-
-	if g.hitAnimation2 > 0 {
-		g.hitAnimation2 -= 10
 	}
 
 	return playerInput
@@ -158,10 +146,6 @@ func (g *Gui) UpdateGamePaused(world *World) PlayerInput {
 		g.state = GameOngoing
 	}
 
-	if g.folderWatcher.FolderContentsChanged() {
-		g.loadGuiData()
-	}
-
 	return playerInput
 }
 
@@ -185,16 +169,6 @@ func (g *Gui) UpdateGameWon(world *World) PlayerInput {
 		g.state = GameOngoing
 	}
 
-	if g.folderWatcher.FolderContentsChanged() {
-		g.loadGuiData()
-	}
-
-	if g.hitAnimation1 > 0 {
-		g.hitAnimation1 -= 10
-	}
-	if g.hitAnimation2 > 0 {
-		g.hitAnimation2 -= 10
-	}
 	return playerInput
 }
 
@@ -216,10 +190,6 @@ func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 		g.leftButtonPressed = false
 	}
 	g.mousePosX, g.mousePosY = ebiten.CursorPosition()
-
-	if g.folderWatcher.FolderContentsChanged() {
-		g.loadGuiData()
-	}
 
 	//if g.targetFrame >= 0 {
 	//	// Rewind.
@@ -258,14 +228,6 @@ func (g *Gui) UpdatePlayback(world *World) PlayerInput {
 		g.player2PreviousHealth = world.Player2.Health
 	}
 
-	if g.hitAnimation1 > 0 {
-		g.hitAnimation1 -= 10
-	}
-
-	if g.hitAnimation2 > 0 {
-		g.hitAnimation2 -= 10
-	}
-
 	return playerInput
 }
 
@@ -287,17 +249,6 @@ func (g *Gui) UpdateGameLost(world *World) PlayerInput {
 	if world != nil && world.Player1.Health.Neq(ZERO) {
 		// This should normally happen only if the world is restarted/reloaded.
 		g.state = GameOngoing
-	}
-
-	if g.folderWatcher.FolderContentsChanged() {
-		g.loadGuiData()
-	}
-
-	if g.hitAnimation1 > 0 {
-		g.hitAnimation1 -= 10
-	}
-	if g.hitAnimation2 > 0 {
-		g.hitAnimation2 -= 10
 	}
 
 	return playerInput
@@ -365,6 +316,17 @@ func (g *Gui) Update() error {
 	}
 
 	g.SendInput(playerInput)
+
+	// Updates common to all states.
+	if g.folderWatcher.FolderContentsChanged() {
+		g.loadGuiData()
+	}
+	if g.hitAnimation1 > 0 {
+		g.hitAnimation1 -= 10
+	}
+	if g.hitAnimation2 > 0 {
+		g.hitAnimation2 -= 10
+	}
 	return nil
 }
 
