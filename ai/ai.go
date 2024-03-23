@@ -1,18 +1,22 @@
 package ai
 
 import (
-	"image/color"
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/world"
 	"time"
 )
 
 type PlayerAI struct {
-	TargetPt          Pt
-	HasTarget         bool
-	DebugInfo         DebugInfo
-	PauseBetweenShots time.Duration
-	LastShot          time.Time
+	TargetPt                  Pt
+	HasTarget                 bool
+	DebugInfo                 DebugInfo
+	PauseBetweenShots         time.Duration
+	LastShot                  time.Time
+	walkableMatrix            Matrix
+	sizeW                     Int
+	offsetW                   Pt
+	initializedWalkableMatrix bool
+	pathfinding               Pathfinding
 }
 
 func PlayerIsAt(p *Player, pt Pt) bool {
@@ -23,6 +27,7 @@ func (mind *PlayerAI) Initialize() {
 	mind.PauseBetweenShots = 1500 * time.Millisecond
 	mind.LastShot = time.Now()
 	mind.HasTarget = false
+	mind.initializedWalkableMatrix = false
 }
 
 func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
@@ -45,6 +50,12 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 		// Re-initialize the mind to initial conditions if the world just
 		// reloaded. E.g. reset the target.
 		mind.Initialize()
+	}
+
+	if !mind.initializedWalkableMatrix {
+		mind.walkableMatrix, mind.sizeW, mind.offsetW = GetWalkableMatrix(w.Obstacles, w.ObstacleSize, body.Bounds.Diameter)
+		mind.initializedWalkableMatrix = true
+		mind.pathfinding.Initialize(mind.walkableMatrix)
 	}
 
 	if time.Now().Sub(mind.LastShot) > mind.PauseBetweenShots {
@@ -70,45 +81,44 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 
 	// Only compute a new path when we don't have a target to go to.
 	if !mind.HasTarget && !PlayerIsAt(body, finalTarget) {
-		mw, sizeW, offsetW := GetWalkableMatrix(w.Obstacles, w.ObstacleSize, body.Bounds.Diameter)
 
 		playerPos := body.Bounds.Center
-		startPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, playerPos)
-		endPt := GetMatrixPointClosestToWorld(mw, sizeW, offsetW, finalTarget)
+		startPt := GetMatrixPointClosestToWorld(mind.walkableMatrix, mind.sizeW, mind.offsetW, playerPos)
+		endPt := GetMatrixPointClosestToWorld(mind.walkableMatrix, mind.sizeW, mind.offsetW, finalTarget)
 
-		mind.DebugInfo.Points = []DebugPoint{}
+		//mind.DebugInfo.Points = []DebugPoint{}
 		//w.Obs = []Square{
 		//	{Pt{U(100), U(100)}, U(10)},
 		//	{playerPos, U(10)},
 		//	{finalTarget, U(10)},
 		//}
-		for y := I(0); y.Lt(mw.NRows()); y.Inc() {
-			for x := I(0); x.Lt(mw.NCols()); x.Inc() {
-				var pt DebugPoint
-				pt.Pos = Pt{x.Times(sizeW), y.Times(sizeW)}
-				pt.Pos.Add(offsetW)
-				pt.Size = U(3)
-				if mw.Get(y, x).Eq(ZERO) {
-					pt.Col = color.RGBA{0, 0, 255, 255}
-				} else {
-					pt.Col = color.RGBA{255, 0, 0, 255}
-				}
-				mind.DebugInfo.Points = append(mind.DebugInfo.Points, pt)
-			}
-		}
+		// Don't build debug info when not needed, as I'm trying to get max
+		// execution time for replaying the world.
+		//for y := I(0); y.Lt(mind.walkableMatrix.NRows()); y.Inc() {
+		//	for x := I(0); x.Lt(mind.walkableMatrix.NCols()); x.Inc() {
+		//		var pt DebugPoint
+		//		pt.Pos = Pt{x.Times(mind.sizeW), y.Times(mind.sizeW)}
+		//		pt.Pos.Add(mind.offsetW)
+		//		pt.Size = U(3)
+		//		if mind.walkableMatrix.Get(y, x).Eq(ZERO) {
+		//			pt.Col = color.RGBA{0, 0, 255, 255}
+		//		} else {
+		//			pt.Col = color.RGBA{255, 0, 0, 255}
+		//		}
+		//		mind.DebugInfo.Points = append(mind.DebugInfo.Points, pt)
+		//	}
+		//}
 
-		var pathfinding Pathfinding
-		pathfinding.Initialize(mw)
-		path := pathfinding.FindPath(startPt, endPt)
+		path := mind.pathfinding.FindPath(startPt, endPt)
 		// Transform path coordinates into world-main coordinates.
 		var pathWorld []Pt
 		for _, pt := range path {
-			pathWorld = append(pathWorld, pt.Times(sizeW))
-			mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
+			pathWorld = append(pathWorld, pt.Times(mind.sizeW))
+			//mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{pathWorld[len(pathWorld)-1], U(10), color.RGBA{255, 123, 0, 255}})
 		}
 
-		mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{Pt{startPt.X.Times(sizeW), startPt.Y.Times(sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
-		mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(sizeW), endPt.Y.Times(sizeW)}, U(10), color.RGBA{0, 0, 0, 255}})
+		//mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{Pt{startPt.X.Times(mind.sizeW), startPt.Y.Times(mind.sizeW)}, U(10), color.RGBA{255, 255, 255, 255}})
+		//mind.DebugInfo.Points = append(mind.DebugInfo.Points, DebugPoint{Pt{endPt.X.Times(mind.sizeW), endPt.Y.Times(mind.sizeW)}, U(10), color.RGBA{0, 0, 0, 255}})
 
 		if len(pathWorld) == 0 {
 			// Don't do anything.
