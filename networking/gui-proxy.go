@@ -50,7 +50,7 @@ func (p *GuiProxyTcpIp) SendPaintData(debugInfo *DebugInfo) {
 	// We have a connection, try to send our input.
 	data := debugInfo.Serialize()
 
-	err := WriteData(p.conn, data)
+	err := WriteData(p.conn, data, 0)
 	// If there was an error, assume the peer is no longer available.
 	// Invalidate the connection and try again later.
 	if err != nil {

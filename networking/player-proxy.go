@@ -51,7 +51,7 @@ func (p *PlayerProxyTcpIp) SendWorldGetInput(w *World) *PlayerInput {
 
 		// Try sending the world to our peer.
 		data := w.Serialize()
-		if err := WriteData(p.conn, data); err != nil {
+		if err := WriteData(p.conn, data, 0); err != nil {
 			// There was an error. Nevermind, close the connection and wait
 			// for a new one.
 			p.conn.Close()
@@ -60,7 +60,7 @@ func (p *PlayerProxyTcpIp) SendWorldGetInput(w *World) *PlayerInput {
 		}
 
 		// Try to get data from our peer.
-		data, err := ReadData(p.conn)
+		data, err := ReadData(p.conn, 0)
 		if err != nil {
 			// There was an error. Nevermind, close the connection and wait
 			// for a new one.

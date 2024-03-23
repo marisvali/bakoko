@@ -67,13 +67,6 @@ func (p *WorldProxyTcpIp) Connect() error {
 		return err // Error, give up.
 	}
 
-	if p.Timeout.Milliseconds() > 0 {
-		err = conn.SetDeadline(time.Now().Add(p.Timeout))
-		if err != nil {
-			return err
-		}
-	}
-
 	p.conn = conn
 	return nil
 }
@@ -88,7 +81,7 @@ func (p *WorldProxyTcpIp) SendInput(input *PlayerInput) error {
 	buf := new(bytes.Buffer)
 	Serialize(buf, input)
 
-	err := WriteData(p.conn, buf.Bytes())
+	err := WriteData(p.conn, buf.Bytes(), p.Timeout)
 	// If there was an error, assume the peer is no longer available.
 	// Invalidate the connection and move on.
 	if err != nil {
@@ -107,7 +100,7 @@ func (p *WorldProxyTcpIp) GetWorld() (w *World, err error) {
 		return nil, errors.New("no connection")
 	}
 
-	data, err := ReadData(p.conn)
+	data, err := ReadData(p.conn, p.Timeout)
 	// If there was an error, assume the peer is no longer available.
 	// Invalidate the connection and try again later.
 	if err != nil {

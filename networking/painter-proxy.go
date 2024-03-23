@@ -48,7 +48,7 @@ func (p *PainterProxyTcpIp) GetPaintData() (info DebugInfo) {
 		}
 
 		// Try to get data from our peer.
-		data, err := ReadData(p.conn)
+		data, err := ReadData(p.conn, 0)
 		if err != nil {
 			// There was an error. Nevermind, close the connection and wait
 			// for a new one.
