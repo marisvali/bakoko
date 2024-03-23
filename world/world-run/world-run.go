@@ -17,6 +17,7 @@ func (wr *WorldRunner) Initialize(recordingFile string) {
 	wr.frameIdx = 0
 	wr.watcher.Folder = "world-data"
 	wr.recordingFile = recordingFile
+	LoadWorld(&wr.w)
 }
 
 func (wr *WorldRunner) Step(input Input) {
