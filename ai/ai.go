@@ -3,20 +3,20 @@ package ai
 import (
 	. "playful-patterns.com/bakoko/ints"
 	. "playful-patterns.com/bakoko/world"
-	"time"
 )
 
 type PlayerAI struct {
 	TargetPt                  Pt
 	HasTarget                 bool
 	DebugInfo                 DebugInfo
-	PauseBetweenShots         time.Duration
-	LastShot                  time.Time
+	PauseBetweenShots         Int
+	LastShot                  Int
 	walkableMatrix            Matrix
 	sizeW                     Int
 	offsetW                   Pt
 	initializedWalkableMatrix bool
 	pathfinding               Pathfinding
+	frameIdx                  Int
 }
 
 func PlayerIsAt(p *Player, pt Pt) bool {
@@ -24,13 +24,16 @@ func PlayerIsAt(p *Player, pt Pt) bool {
 }
 
 func (mind *PlayerAI) Initialize() {
-	mind.PauseBetweenShots = 1500 * time.Millisecond
-	mind.LastShot = time.Now()
 	mind.HasTarget = false
 	mind.initializedWalkableMatrix = false
+	mind.PauseBetweenShots = I(90)
+	mind.frameIdx = ZERO
+	mind.LastShot = mind.frameIdx
 }
 
 func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
+	defer mind.frameIdx.Inc()
+
 	// Check somehow if the world-main is initialized.
 	if w.Obstacles.NRows().Leq(ZERO) {
 		// If there's no world-main matrix, we can probably safely assume
@@ -58,13 +61,13 @@ func (mind *PlayerAI) Step(w *World) (input PlayerInput) {
 		mind.pathfinding.Initialize(mind.walkableMatrix)
 	}
 
-	if time.Now().Sub(mind.LastShot) > mind.PauseBetweenShots {
+	if mind.frameIdx.Minus(mind.LastShot).Gt(mind.PauseBetweenShots) {
 		ballStart := body.Bounds.Center
 		ballEnd := w.Player1.Bounds.Center
 		if pathIsClear(w, ballStart, ballEnd, U(50)) {
 			input.Shoot = true
 			input.ShootPt = ballEnd
-			mind.LastShot = time.Now()
+			mind.LastShot = mind.frameIdx
 		}
 	}
 
