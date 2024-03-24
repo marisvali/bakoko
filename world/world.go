@@ -432,7 +432,7 @@ func (w *World) Step(input *Input, frameIdx int) {
 func LoadWorld(w *World) {
 	*w = World{} // Reset everything.
 
-	data := loadWorldData("world-data")
+	data := loadWorldData(Home("world-data"))
 
 	w.BallSpeed = I(data.BallSpeed)
 	w.BallDec = I(data.BallDec)
@@ -454,7 +454,7 @@ func LoadWorld(w *World) {
 	w.Player2.Bounds.Diameter = I(data.Player2Diameter)
 	w.Player2.StunnedImobilizes = data.Player2StunnedImobilizes
 	w.ObstacleSize = I(data.ObstacleSize)
-	levelString := ReadAllText(data.Level)
+	levelString := ReadAllText(Home(data.Level))
 	var balls1 []Pt
 	//var balls2 []Pt
 	w.Obstacles, balls1, _ = LevelFromString(levelString)

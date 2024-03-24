@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -168,4 +170,14 @@ func (f *FolderWatcher) FolderContentsChanged() bool {
 		}
 	}
 	return changed
+}
+
+func HomeFolder() string {
+	ex, err := os.Executable()
+	Check(err)
+	return filepath.Dir(ex)
+}
+
+func Home(relativePath string) string {
+	return path.Join(HomeFolder(), relativePath)
 }

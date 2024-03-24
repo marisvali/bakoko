@@ -901,28 +901,28 @@ func (g *Gui) loadGuiData() {
 	CheckCrashes = false
 	for {
 		CheckFailed = nil
-		g.ball1 = loadImage("gui-data/ball1.png")
-		g.ball2 = loadImage("gui-data/ball2.png")
-		g.player1 = loadImage("gui-data/player1.png")
-		g.player1Hit = loadImage("gui-data/player1-hit.png")
-		g.player2 = loadImage("gui-data/player2.png")
-		g.player2Hit = loadImage("gui-data/player2-hit.png")
-		g.health = loadImage("gui-data/health.png")
-		g.obstacle = loadImage("gui-data/obstacle.png")
-		g.background = loadImage("gui-data/background.png")
-		g.hit = loadImage("gui-data/hit.png")
-		g.hitGood = loadImage("gui-data/hit-good.png")
-		g.textBackground = loadImage("gui-data/text-background.png")
-		g.won = loadImage("gui-data/won.png")
-		g.lost = loadImage("gui-data/lost.png")
-		g.play = loadImage("gui-data/play.png")
-		g.pause = loadImage("gui-data/pause.png")
-		g.playBar = loadImage("gui-data/play-bar.png")
-		g.cursor = loadImage("gui-data/cursor.png")
+		g.ball1 = loadImage(Home("gui-data/ball1.png"))
+		g.ball2 = loadImage(Home("gui-data/ball2.png"))
+		g.player1 = loadImage(Home("gui-data/player1.png"))
+		g.player1Hit = loadImage(Home("gui-data/player1-hit.png"))
+		g.player2 = loadImage(Home("gui-data/player2.png"))
+		g.player2Hit = loadImage(Home("gui-data/player2-hit.png"))
+		g.health = loadImage(Home("gui-data/health.png"))
+		g.obstacle = loadImage(Home("gui-data/obstacle.png"))
+		g.background = loadImage(Home("gui-data/background.png"))
+		g.hit = loadImage(Home("gui-data/hit.png"))
+		g.hitGood = loadImage(Home("gui-data/hit-good.png"))
+		g.textBackground = loadImage(Home("gui-data/text-background.png"))
+		g.won = loadImage(Home("gui-data/won.png"))
+		g.lost = loadImage(Home("gui-data/lost.png"))
+		g.play = loadImage(Home("gui-data/play.png"))
+		g.pause = loadImage(Home("gui-data/pause.png"))
+		g.playBar = loadImage(Home("gui-data/play-bar.png"))
+		g.cursor = loadImage(Home("gui-data/cursor.png"))
 		if g.state == Playback {
-			LoadJSON("gui-data/gui-playback.json", &g.data)
+			LoadJSON(Home("gui-data/gui-playback.json"), &g.data)
 		} else {
-			LoadJSON("gui-data/gui.json", &g.data)
+			LoadJSON(Home("gui-data/gui.json"), &g.data)
 		}
 
 		if CheckFailed == nil {
@@ -992,7 +992,7 @@ func (g *Gui) Init(worldProxy WorldProxy, worldRunner *WorldRunner,
 		g.playerInputs = DeserializeInputs(recordingFile)
 	}
 
-	g.folderWatcher.Folder = "gui-data"
+	g.folderWatcher.Folder = Home("gui-data")
 	g.loadGuiData()
 
 	// Load the Arial font

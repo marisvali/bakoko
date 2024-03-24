@@ -5,4 +5,4 @@
 /world.exe
 /graphics.exe
 /recordings
-/executables
+/executables/*.exe

@@ -16,7 +16,7 @@ type WorldRunner struct {
 func (wr *WorldRunner) Initialize(recordingFile string, folderWatchingEnabled bool) {
 	wr.frameIdx = 0
 	if folderWatchingEnabled {
-		wr.watcher.Folder = "world-data"
+		wr.watcher.Folder = Home("world-data")
 	}
 	wr.recordingFile = recordingFile
 	LoadWorld(&wr.w)
