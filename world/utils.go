@@ -1,9 +1,11 @@
 package world
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -45,7 +47,7 @@ func FileExists(name string) bool {
 func GetNewRecordingFile() string {
 	date := time.Now()
 	for i := 0; i < 1000000; i++ {
-		filename := fmt.Sprintf("recordings/recorded-inputs-%04d-%02d-%02d-%06d",
+		filename := fmt.Sprintf("recordings/recorded-inputs-%04d-%02d-%02d-%06d.bkk",
 			date.Year(), date.Month(), date.Day(), i)
 		if !FileExists(filename) {
 			return filename
@@ -180,4 +182,63 @@ func HomeFolder() string {
 
 func Home(relativePath string) string {
 	return path.Join(HomeFolder(), relativePath)
+}
+
+func Unzip(filename string) []byte {
+	// Open a zip archive for reading.
+	r, err := zip.OpenReader(filename)
+	Check(err)
+	defer r.Close()
+
+	// We assume there's exactly 1 file in the zip archive.
+	if len(r.File) != 1 {
+		Check(errors.New(fmt.Sprintf("expected exactly one file in zip archive, got: %d", len(r.File))))
+	}
+
+	// Get a reader for that 1 file.
+	f := r.File[0]
+	rc, err := f.Open()
+	Check(err)
+	defer rc.Close()
+
+	// Keep reading bytes, 1024 bytes at a time.
+	buffer := make([]byte, 1024)
+	fullContent := make([]byte, 0, 1024)
+	for {
+		nbytesActuallyRead, err := rc.Read(buffer)
+		fullContent = append(fullContent, buffer[:nbytesActuallyRead]...)
+		if err == io.EOF {
+			break
+		}
+		Check(err)
+		if nbytesActuallyRead == 0 {
+			break
+		}
+	}
+
+	// Return bytes.
+	return fullContent
+}
+
+func Zip(filename string, data []byte) {
+	// Create a buffer to write our archive to.
+	buf := new(bytes.Buffer)
+
+	// Create a new zip archive.
+	w := zip.NewWriter(buf)
+
+	// Create a single file inside it called "recorded-inputs".
+	f, err := w.Create("recorded-inputs")
+	Check(err)
+
+	// Write/compress the data to the file inside the zip.
+	_, err = f.Write(data)
+	Check(err)
+
+	// Make sure to check the error on Close.
+	err = w.Close()
+	Check(err)
+
+	// Actually write the zip to disk.
+	WriteFile(filename, buf.Bytes())
 }

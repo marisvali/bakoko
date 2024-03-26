@@ -124,12 +124,12 @@ func SerializeInputs(inputs []PlayerInput, filename string) {
 	buf := new(bytes.Buffer)
 	Serialize(buf, int64(len(inputs)))
 	Serialize(buf, inputs)
-	WriteFile(filename, buf.Bytes())
+	Zip(filename, buf.Bytes())
 }
 
 func DeserializeInputs(filename string) []PlayerInput {
 	var inputs []PlayerInput
-	buf := bytes.NewBuffer(ReadFile(filename))
+	buf := bytes.NewBuffer(Unzip(filename))
 	var lenInputs Int
 	Deserialize(buf, &lenInputs)
 	inputs = make([]PlayerInput, lenInputs.ToInt64())

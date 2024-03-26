@@ -932,8 +932,9 @@ func (g *Gui) loadGuiData() {
 	CheckCrashes = true
 
 	ebiten.SetWindowSize(g.data.WindowWidth, g.data.WindowHeight)
-	ebiten.SetWindowTitle("Viewer")
+	ebiten.SetWindowTitle("Bakoko")
 	ebiten.SetWindowPosition(10, 1080-10-g.data.WindowHeight)
+	//ebiten.SetWindowIcon([]image.Image{g.ball1})
 }
 
 func (g *Gui) SetDebugInfo(i int, info DebugInfo) {
