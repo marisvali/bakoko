@@ -80,7 +80,7 @@ func dijkstra4(m Matrix, pairs []StartEnd) (paths [][]Pt) {
 				// turn the path of ints back to path of points
 				path = []Pt{}
 				for i := range pathInts {
-					path = append(path, m.IndexToPt(I(int64(pathInts[i]))))
+					path = append(path, m.IndexToPt(I(pathInts[i])))
 				}
 
 				paths = append(paths, path)

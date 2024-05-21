@@ -29,8 +29,8 @@ func heuristic(start, end, nCols int) int {
 }
 
 func heuristic2(m Matrix, start, end int) int {
-	return nodeDist(m.IndexToPt(I(int64(start))),
-		m.IndexToPt(I(int64(end))))
+	return nodeDist(m.IndexToPt(I(start)),
+		m.IndexToPt(I(end)))
 }
 
 func nodeDist(p, q Pt) int {
@@ -127,7 +127,7 @@ func astarOptimized(m Matrix, pairs []StartEnd) (paths [][]Pt) {
 				// turn the path of ints back to path of points
 				path = []Pt{}
 				for i := range pathInts {
-					path = append(path, m.IndexToPt(I(int64(pathInts[i]))))
+					path = append(path, m.IndexToPt(I(pathInts[i])))
 				}
 
 				paths = append(paths, path)

@@ -67,7 +67,7 @@ func (p *PathfindingTest) Initialize(m Matrix) {
 func (p *PathfindingTest) computePath(parents []int, end int) (path []Pt) {
 	node := end
 	for node >= 0 {
-		path = append(path, p.m.IndexToPt(I(int64(node))))
+		path = append(path, p.m.IndexToPt(I(node)))
 		node = parents[node]
 	}
 	slices.Reverse(path)
